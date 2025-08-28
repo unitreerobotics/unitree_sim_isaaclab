@@ -39,7 +39,7 @@ sudo apt install cmake build-essential
 
 cd IsaacLab
 
-git checkout feature/isaacsim_5_0
+git checkout v2.2.0
 
 ./isaaclab.sh --install 
 
@@ -138,7 +138,23 @@ pip install -r requirements.txt
 
 **问题:**
 - 1 libstdc++.so.6版本低
+
+**错误信息:**
 ```
 OSError: /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/bin/../lib/libstdc++.so.6: version GLIBCXX_3.4.30' not found (required by /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/lib/python3.11/site-packages/omni/libcarb.so)
 ```
-解决: conda install -c conda-forge libstdcxx-ng
+
+**解决方案:**
+```bash
+conda install -c conda-forge libstdcxx-ng
+```
+
+- 2 安装 unitree_sdk2_python 时出错
+
+**错误信息:**
+```
+Could not locate cyclonedds. Try to set CYCLONEDDS_HOME or CMAKE_PREFIX_PATH
+```
+
+**解决方案:**
+首先编译并安装 cyclonedds，然后将 `CYCLONEDDS_HOME` 设置为编译的 cyclonedds 路径，最后安装 unitree_sdk2_python。更详细的说明请参考 [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python?tab=readme-ov-file#faq) 官方文档。
