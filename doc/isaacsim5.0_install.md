@@ -126,24 +126,26 @@ pip3 install -e .
 pip install -r requirements.txt
 ```
 
--**Problems:**
+### Problems
 
-* 1 `libstdc++.so.6` version is too low
+- `libstdc++.so.6` version is too low
+  
+  **Error:**
+  ```
+  OSError: /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/bin/../lib/libstdc++.so.6: version GLIBCXX_3.4.30' not found (required by /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/lib/python3.11/site-packages/omni/libcarb.so)
+  ```
+  
+  **Solution:**
+  ```bash
+  conda install -c conda-forge libstdcxx-ng
+  ```
 
-**Error:**
-```
-OSError: /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/bin/../lib/libstdc++.so.6: version GLIBCXX_3.4.30' not found (required by /home/unitree/tools/anaconda3/envs/env_isaaclab_tem/lib/python3.11/site-packages/omni/libcarb.so)
-```
-**Solution:**
-```bash
-conda install -c conda-forge libstdcxx-ng
-```
-
-* 2 Error when installing unitree_sdk2_python
-
-**Error:**
-```
-Could not locate cyclonedds. Try to set CYCLONEDDS_HOME or CMAKE_PREFIX_PATH
-```
-**Solution:**
-First, compile and install cyclonedds, then set `CYCLONEDDS_HOME` to the path where cyclonedds was compiled, and finally install unitree_sdk2_python. For more detailed instructions, please refer to the [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python?tab=readme-ov-file#faq) official documentation.
+- Error when installing unitree_sdk2_python
+  
+  **Error:**
+  ```
+  Could not locate cyclonedds. Try to set CYCLONEDDS_HOME or CMAKE_PREFIX_PATH
+  ```
+  
+  **Solution:**
+  First, compile and install cyclonedds, then set `CYCLONEDDS_HOME` to the path where cyclonedds was compiled, and finally install unitree_sdk2_python. For more detailed instructions, please refer to the [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python?tab=readme-ov-file#faq) official documentation.
