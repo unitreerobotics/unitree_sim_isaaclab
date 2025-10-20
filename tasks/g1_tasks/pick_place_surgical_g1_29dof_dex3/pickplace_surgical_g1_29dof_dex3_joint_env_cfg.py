@@ -90,12 +90,12 @@ class ObservationsCfg:
 @configclass
 class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    success = DoneTerm(
-        func=mdp.object_moved,
-        params={
-            "object_cfg": SceneEntityCfg("trocar_object"),
-        }
-    )
+    # success = DoneTerm(
+    #     func=mdp.object_moved,
+    #     params={
+    #         "object_cfg": SceneEntityCfg("trocar_object"),
+    #     }
+    # )
     # check if the object is out of the working range
     # success = DoneTerm(func=mdp.reset_object_estimate)# use task completion check function
 

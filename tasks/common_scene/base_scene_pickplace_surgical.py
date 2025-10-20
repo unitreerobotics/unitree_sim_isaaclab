@@ -68,21 +68,21 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     )
     
     # tube 
-    tube = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/DrainageTube002",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.37669, 0.20845, 0.80146],
-            rot=[0.70711, 0.0, 0.0, 0.70711]
-        ),
-        spawn=UsdFileCfg(
-            # usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/DrainageTube002/DrainageTube002.usd",
-            usd_path="/home/nvidia/workspace/yunl/assets/DrainageTube002/DrainageTube003.usd",
-            collision_props=sim_utils.CollisionPropertiesCfg(
-                contact_offset=0.01,   # 提前生成接触
-                rest_offset=0.001      # 静止间隙，小于 contact_offset
-            ),
-        ),
-    )
+    # tube = AssetBaseCfg(
+    #     prim_path="/World/envs/env_.*/DrainageTube002",
+    #     init_state=AssetBaseCfg.InitialStateCfg(
+    #         pos=[0.37669, 0.20845, 0.80146],
+    #         rot=[0.70711, 0.0, 0.0, 0.70711]
+    #     ),
+    #     spawn=UsdFileCfg(
+    #         # usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/DrainageTube002/DrainageTube002.usd",
+    #         usd_path="/home/nvidia/workspace/yunl/assets/DrainageTube.usd",
+    #         collision_props=sim_utils.CollisionPropertiesCfg(
+    #             contact_offset=0.01,
+    #             rest_offset=0.001
+    #         ),
+    #     ),
+    # )
 
     # trocar 
     trocar = AssetBaseCfg(
@@ -97,16 +97,17 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
             rot=[0.72537, 0.68835, 0.0, 0.0]
         ),
         spawn=UsdFileCfg(
-            usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/PunctureDevice001/PunctureDevice001.usd", 
+            # usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/PunctureDevice001/PunctureDevice001.usd", 
+            usd_path="/home/nvidia/workspace/yunl/assets/Trocar02/Trocar002/Trocar002.usd", 
         ),
     )
-    trocar_object = RigidObjectCfg(
-        prim_path="/World/envs/env_.*/PunctureDevice001/PunctureDevice001_Pipe",
-        init_state=RigidObjectCfg.InitialStateCfg(
-            pos=[0.311, 0.151, 0.765],
-            rot=[0.0, 0.0, 0.68835, 0.72537]
-        ),
-    )
+    # trocar_object = RigidObjectCfg(
+    #     prim_path="/World/envs/env_.*/PunctureDevice001/PunctureDevice001_Pipe",
+    #     init_state=RigidObjectCfg.InitialStateCfg(
+    #         pos=[0.311, 0.151, 0.765],
+    #         rot=[0.0, 0.0, 0.68835, 0.72537]
+    #     ),
+    # )
     # trocar_pipe = RigidObjectCfg(
     #     prim_path="/World/envs/env_.*/PunctureDevice001/PunctureDevice001_Pipe",
     #     init_state=RigidObjectCfg.InitialStateCfg(
