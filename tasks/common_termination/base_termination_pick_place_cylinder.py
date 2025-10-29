@@ -21,16 +21,20 @@ def reset_object_estimate(
     max_y: float = 0.7,                # maximum y position threshold
     min_height: float = 0.5,
 ) -> torch.Tensor:
-    # Return a boolean tensor per environment indicating reset condition
+   # when the object is not in the set return, reset
+    # Get object entity from the scene
+    # 1. get object entity from the scene
     object: RigidObject = env.scene[object_cfg.name]
-    positions_w = object.data.root_pos_w  # shape: (num_envs, 3)
-    wheel_x = positions_w[:, 0]
-    wheel_y = positions_w[:, 1]
-    wheel_height = positions_w[:, 2]
+    
+    # Extract wheel position relative to environment origin
+    # 2. get object position
+    wheel_x = object.data.root_pos_w[:, 0]         # x position
+    wheel_y = object.data.root_pos_w[:, 1]        # y position
+    wheel_height = object.data.root_pos_w[:, 2]   # z position (height)
+    done_x = (wheel_x < max_x) and  (wheel_x > min_x)
+    done_y = (wheel_y < max_y) and (wheel_y > min_y)
+    done_height = (wheel_height > min_height)
+    done = done_x and done_y and done_height
 
-    in_x = torch.logical_and(wheel_x > min_x, wheel_x < max_x)
-    in_y = torch.logical_and(wheel_y > min_y, wheel_y < max_y)
-    in_h = wheel_height > min_height
-    inside_region = torch.logical_and(torch.logical_and(in_x, in_y), in_h)
-    # Done means object is inside region; reset signal is the negation
-    return ~inside_region
+    
+    return not done

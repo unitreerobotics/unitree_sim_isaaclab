@@ -138,16 +138,16 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                 ".*_wrist_.*_joint"
             ],
             effort_limit=None,
-            velocity_limit=None,
-             stiffness={  # increase the stiffness (kp)
-                 ".*_shoulder_.*_joint": 300.0,
+            velocity_limit=10,
+            stiffness={  # increase the stiffness (kp)
+                 ".*_shoulder_.*_joint": 400.0,
                  ".*_elbow_joint": 400.0,
                  ".*_wrist_.*_joint": 400.0,
             },
-             damping={    # increase the damping (kd)
-                 ".*_shoulder_.*_joint": 3.0,
-                 ".*_elbow_joint": 2.5,
-                 ".*_wrist_.*_joint": 2.5,
+            damping={    # increase the damping (kd)
+                 ".*_shoulder_.*_joint": 20.0,
+                 ".*_elbow_joint": 20.0,
+                 ".*_wrist_.*_joint": 10.0,
              },
             armature=None,
         ),
@@ -157,7 +157,7 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                 ".*_hand_middle_.*_joint",
                 ".*_hand_thumb_.*_joint"
             ],
-            effort_limit=300,
+            effort_limit=5,
             velocity_limit=100.0,
             stiffness={
                 ".*": 100.0,

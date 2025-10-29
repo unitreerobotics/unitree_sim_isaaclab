@@ -13,6 +13,10 @@ import contextlib
 import time
 import sys
 import signal
+import threading
+import termios
+import tty
+import select
 import torch
 import gymnasium as gym
 from pathlib import Path
@@ -434,6 +438,18 @@ def main():
     else:
         setup_signal_handlers(controller)
     print("Note: The DDS in Sim transmits messages on channel 1. Please ensure that other DDS instances use the same channel for message exchange by setting: ChannelFactoryInitialize(1).")
+    # Setup non-blocking keyboard polling (r: env.reset, 1: reset_object_self, 2: reset_all_self)
+    kb_fd = sys.stdin.fileno()
+    kb_old_settings = termios.tcgetattr(kb_fd)
+    tty.setcbreak(kb_fd)
+
+    def poll_key_nonblocking():
+        dr, _, _ = select.select([sys.stdin], [], [], 0)
+        if dr:
+            ch = sys.stdin.read(1)
+            return ch
+        return None
+
     try:
         # start controller - start asynchronous components
         print("========= start controller =========")
@@ -455,6 +471,28 @@ def main():
             while simulation_app.is_running() and controller.is_running:
                 current_time = time.time()
                 loop_count += 1
+                # Keyboard controls
+                try:
+                    key = poll_key_nonblocking()
+                    if key == 'r':
+                        print("[kb] reset env")
+                        env.sim.reset()
+                        env.reset()
+                    elif key == '1':
+                        try:
+                            print("[kb] reset_object_self event")
+                            env_cfg.event_manager.trigger("reset_object_self", env)
+                        except Exception as e:
+                            print(f"[kb] reset_object_self failed: {e}")
+                    elif key == '2':
+                        try:
+                            print("[kb] reset_all_self event")
+                            env_cfg.event_manager.trigger("reset_all_self", env)
+                        except Exception as e:
+                            print(f"[kb] reset_all_self failed: {e}")
+                except Exception as e:
+                    # ignore keyboard errors to keep loop running
+                    pass
                 if not args_cli.replay_data:
                     try:
                         env_state = env.scene.get_state()
@@ -579,6 +617,11 @@ def main():
     finally:
         # clean up resources
         print("\nclean up resources...")
+        # restore terminal settings
+        try:
+            termios.tcsetattr(kb_fd, termios.TCSADRAIN, kb_old_settings)
+        except Exception:
+            pass
         controller.cleanup()
         
         env.close()

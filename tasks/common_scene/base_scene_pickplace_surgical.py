@@ -19,6 +19,51 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     defines a complete scene containing robot, object, table, etc.
     """
       # 1. room wall configuration - simplified configuration to avoid rigid body property conflicts
+    scene = AssetBaseCfg(
+        prim_path="/World/envs/env_.*/Scene",
+        spawn=UsdFileCfg(
+            usd_path="/home/nvidia/workspace/yunl/assets/scene.usd",  # use simple room model
+        ),
+    )
+    # Trocar (rigid object inside the loaded scene.usd)
+    trocar_1 = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Scene/Trocar002",
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=[-1.61873, 1.9629, 0.82559],
+            rot=[0.60545, 0.00148, -0.72054, -0.33799]
+        ),
+    )
+    trocar_2 = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Scene/DisposableLaparoscopicPunctureDevice001",
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=[-1.58427, 2.04132, 0.82526],
+            rot=[0.60619, -0.56475, -0.39249, 0.39942]
+        ),
+    )
+
+    # Cart (example)
+    # cart = RigidObjectCfg(
+    #     prim_path="/World/envs/env_.*/Cart001"
+    # )
+    # Plate (example)
+    plate = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Scene/plate001",
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=[-1.55013, 2.05216, 0.80932],
+            rot=[1.0, 0.0, 0.0, 0.0]
+        ),
+    )
+
+
+    # Tube (example)
+    tube = AssetBaseCfg(
+        prim_path="/World/envs/env_.*/Scene/DrainageTube003",
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=[-1.49695, 2.087, 0.84494],
+            rot=[0.98716, 0.1597, 0.0, 0.0]
+        ),
+    )
+    
     # room_walls = AssetBaseCfg(
     #     prim_path="/World/envs/env_.*/Room",
     #     init_state=AssetBaseCfg.InitialStateCfg(
@@ -31,41 +76,41 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     # )
     
     # cart
-    cart = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/Cart",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.38297, 0.36, 0.0],
-            rot=[1.0, 0.0, 0.0, 0.0]
-        ),
-        spawn=UsdFileCfg(
-            usd_path=f"/home/nvidia/workspace/yunl/assets/MedicalAssets20251013/Cart001/Cart001.usd",  # use simple room model
-        ),
-    )
+    # cart = AssetBaseCfg(
+    #     prim_path="/World/envs/env_.*/Cart",
+    #     init_state=AssetBaseCfg.InitialStateCfg(
+    #         pos=[0.38297, 0.36, 0.0],
+    #         rot=[1.0, 0.0, 0.0, 0.0]
+    #     ),
+    #     spawn=UsdFileCfg(
+    #         usd_path=f"/home/nvidia/workspace/yunl/assets/MedicalAssets20251013/Cart001/Cart001.usd",  # use simple room model
+    #     ),
+    # )
     
     # mayo stand
-    mayo = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/MayoStand",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.36603, -0.17142, 0.0],
-            rot=[1.0, 0.0, 0.0, 0.0]
-        ),
-        spawn=UsdFileCfg(
-            usd_path=f"/home/nvidia/workspace/yunl/assets/InstrumentTrolley001/InstrumentTrolley001.usd",
-        ),
-    )
+    # mayo = AssetBaseCfg(
+    #     prim_path="/World/envs/env_.*/MayoStand",
+    #     init_state=AssetBaseCfg.InitialStateCfg(
+    #         pos=[0.36603, -0.17142, 0.0],
+    #         rot=[1.0, 0.0, 0.0, 0.0]
+    #     ),
+    #     spawn=UsdFileCfg(
+    #         usd_path=f"/home/nvidia/workspace/yunl/assets/InstrumentTrolley001/InstrumentTrolley001.usd",
+    #     ),
+    # )
     
     # plate
-    plate = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/Plate",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.37286, 0.20589, 0.81333],
-            # pos=[0.28, 0.17, 1.24],
-            rot=[1.0, 0.0, 0.0, 0.0]
-        ),
-        spawn=UsdFileCfg(
-            usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets20251013/Plate001/plate001.usd",  # use simple room model
-        ),
-    )
+    # plate = AssetBaseCfg(
+    #     prim_path="/World/envs/env_.*/Plate",
+    #     init_state=AssetBaseCfg.InitialStateCfg(
+    #         pos=[0.37286, 0.20589, 0.81333],
+    #         # pos=[0.28, 0.17, 1.24],
+    #         rot=[1.0, 0.0, 0.0, 0.0]
+    #     ),
+    #     spawn=UsdFileCfg(
+    #         usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets20251013/Plate001/plate001.usd",  # use simple room model
+    #     ),
+    # )
     
     # tube 
     # tube = AssetBaseCfg(
@@ -85,22 +130,22 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     # )
 
     # trocar 
-    trocar = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/PunctureDevice001",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            # pos=[0.235, 0.108, 0.74739],
-            # pos=[0.235, 0.12664, 0.76121],
-            # rot=[0.52133, 0.47772, 0.47772, 0.53134]
-            # pos=[0.235, 0.14499, 0.760],
-            # rot=[0.75849, 0.65037, 0.00244, 0.04115]
-            pos=[0.26335, 0.19818, 0.81428],
-            rot=[0.72537, 0.68835, 0.0, 0.0]
-        ),
-        spawn=UsdFileCfg(
-            # usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/PunctureDevice001/PunctureDevice001.usd", 
-            usd_path="/home/nvidia/workspace/yunl/assets/Trocar02/Trocar002/Trocar002.usd", 
-        ),
-    )
+    # trocar = AssetBaseCfg(
+    #     prim_path="/World/envs/env_.*/PunctureDevice001",
+    #     init_state=AssetBaseCfg.InitialStateCfg(
+    #         # pos=[0.235, 0.108, 0.74739],
+    #         # pos=[0.235, 0.12664, 0.76121],
+    #         # rot=[0.52133, 0.47772, 0.47772, 0.53134]
+    #         # pos=[0.235, 0.14499, 0.760],
+    #         # rot=[0.75849, 0.65037, 0.00244, 0.04115]
+    #         pos=[0.26335, 0.19818, 0.81428],
+    #         rot=[0.72537, 0.68835, 0.0, 0.0]
+    #     ),
+    #     spawn=UsdFileCfg(
+    #         # usd_path="/home/nvidia/workspace/yunl/assets/MedicalAssets2025093001/PunctureDevice001/PunctureDevice001.usd", 
+    #         usd_path="/home/nvidia/workspace/yunl/assets/Trocar02/Trocar002/Trocar002.usd", 
+    #     ),
+    # )
     # trocar_object = RigidObjectCfg(
     #     prim_path="/World/envs/env_.*/PunctureDevice001/PunctureDevice001_Pipe",
     #     init_state=RigidObjectCfg.InitialStateCfg(
@@ -126,17 +171,17 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     
     # Ground plane
     # 3. ground configuration
-    ground = AssetBaseCfg(
-        prim_path="/World/GroundPlane",    # ground in the scene
-        spawn=GroundPlaneCfg( ),    # ground configuration
-    )
+    # ground = AssetBaseCfg(
+    #     prim_path="/World/GroundPlane",    # ground in the scene
+    #     spawn=GroundPlaneCfg( ),    # ground configuration
+    # )
 
     # Lights
     # 4. light configuration
     light = AssetBaseCfg(
         prim_path="/World/light",   # light in the scene
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), # light color (white)
-                                     intensity=3000.0),    # light intensity
+                                     intensity=1000.0),    # light intensity
     )
 
     world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
