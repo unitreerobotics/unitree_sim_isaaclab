@@ -153,13 +153,13 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 2
+        self.decimation = 4
         self.episode_length_s = 20.0
         # simulation settings
         # self.sim.dt = 0.005
-        self.sim.dt = 1/120
+        self.sim.dt = 1/200
         self.sim.render_interval = self.decimation
-        # self.sim.physx.bounce_threshold_velocity = 0.01
+        self.sim.physx.bounce_threshold_velocity = 0.01
         # self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         # self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         # self.sim.physx.friction_correlation_distance = 0.00625

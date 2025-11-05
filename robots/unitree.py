@@ -13,8 +13,8 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
         usd_path=f"{project_root}/assets/robots/g1-29dof-dex3-base-fix-usd/g1_29dof_with_dex3_base_fix.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
-            disable_gravity=False,
-            retain_accelerations=True,  # 启用加速度计算 (Enable acceleration computation)
+            disable_gravity=True,
+            retain_accelerations=False,
             linear_damping=0.0,
             angular_damping=0.0,
             max_linear_velocity=1000.0,
@@ -137,7 +137,7 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                 ".*_elbow_joint",
                 ".*_wrist_.*_joint"
             ],
-            effort_limit=None,
+            effort_limit=5,
             velocity_limit=10,
             stiffness={  # increase the stiffness (kp)
                  ".*_shoulder_.*_joint": 400.0,
@@ -145,9 +145,9 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                  ".*_wrist_.*_joint": 400.0,
             },
             damping={    # increase the damping (kd)
-                 ".*_shoulder_.*_joint": 20.0,
-                 ".*_elbow_joint": 20.0,
-                 ".*_wrist_.*_joint": 10.0,
+                 ".*_shoulder_.*_joint": 80.0,
+                 ".*_elbow_joint": 80.0,
+                 ".*_wrist_.*_joint": 80.0,
              },
             armature=None,
         ),
@@ -157,7 +157,7 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                 ".*_hand_middle_.*_joint",
                 ".*_hand_thumb_.*_joint"
             ],
-            effort_limit=5,
+            effort_limit=10,
             velocity_limit=100.0,
             stiffness={
                 ".*": 100.0,
@@ -184,7 +184,7 @@ G129_CFG_WITH_DEX1_BASE_FIX = ArticulationCfg(
             retain_accelerations=True,  # 启用加速度计算 (Enable acceleration computation)
             linear_damping=0.0,
             angular_damping=0.0,
-            max_linear_velocity=1000.0,
+            max_linear_velocity=100.0,
             max_angular_velocity=1000.0,
             max_depenetration_velocity=1.0,
         ),
@@ -292,17 +292,17 @@ G129_CFG_WITH_DEX1_BASE_FIX = ArticulationCfg(
                 ".*_elbow_joint",
                 ".*_wrist_.*_joint"
             ],
-            effort_limit=None,
-            velocity_limit=None,
+            effort_limit=20,
+            velocity_limit=10,
             stiffness={  # increase the stiffness (kp)
-                 ".*_shoulder_.*_joint": 25.0,
-                 ".*_elbow_joint": 50.0,
-                 ".*_wrist_.*_joint": 40.0,
+                 ".*_shoulder_.*_joint": 250.0,
+                 ".*_elbow_joint": 500.0,
+                 ".*_wrist_.*_joint": 400.0,
             },
              damping={    # increase the damping (kd)
-                 ".*_shoulder_.*_joint": 2.0,
-                 ".*_elbow_joint": 2.0,
-                 ".*_wrist_.*_joint": 2.0,
+                 ".*_shoulder_.*_joint": 20.0,
+                 ".*_elbow_joint": 20.0,
+                 ".*_wrist_.*_joint": 20.0,
              },
             armature=None,
         ),
@@ -313,10 +313,10 @@ G129_CFG_WITH_DEX1_BASE_FIX = ArticulationCfg(
                 "right_hand_Joint1_1",
                 "right_hand_Joint2_1",
             ],
-            effort_limit=None,  # increase the torque limit
-            velocity_limit=None,  # set the velocity limit to 0
-            stiffness=800.0,    # increase the stiffness (kp)
-            damping=3.0,        # increase the damping (kd)
+            effort_limit=10,  # increase the torque limit
+            velocity_limit=5,  # set the velocity limit to 0
+            stiffness=500.0,    # increase the stiffness (kp)
+            damping=10.0,        # increase the damping (kd)
             friction=200.0,
             armature=None,
         ),
@@ -687,10 +687,10 @@ G129_CFG_WITH_DEX1_WHOLEBODY = ArticulationCfg(
                 "right_hand_Joint1_1",
                 "right_hand_Joint2_1",
             ],
-            effort_limit=None,  # increase the torque limit
-            velocity_limit=None,  # set the velocity limit to 0
-            stiffness=800.0,    # increase the stiffness (kp)
-            damping=3.0,        # increase the damping (kd)
+            effort_limit=10,  # increase the torque limit
+            velocity_limit=10,  # set the velocity limit to 0
+            stiffness=500.0,    # increase the stiffness (kp)
+            damping=10.0,        # increase the damping (kd)
             friction=200.0,
             armature=None,
         ),

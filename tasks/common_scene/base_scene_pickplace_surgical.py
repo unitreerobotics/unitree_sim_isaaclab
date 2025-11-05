@@ -22,7 +22,7 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     scene = AssetBaseCfg(
         prim_path="/World/envs/env_.*/Scene",
         spawn=UsdFileCfg(
-            usd_path="/home/nvidia/workspace/yunl/assets/scene.usd",  # use simple room model
+            usd_path="/home/again/HealTH/Assets/scene.usd",  # use simple room model
         ),
     )
     # Trocar (rigid object inside the loaded scene.usd)
@@ -36,8 +36,8 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     trocar_2 = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Scene/DisposableLaparoscopicPunctureDevice001",
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=[-1.58427, 2.04132, 0.82526],
-            rot=[0.60619, -0.56475, -0.39249, 0.39942]
+            pos=[-1.52635, 2.09436, 0.85483],
+            rot=[0.63046, -0.59294, -0.33848, 0.36928]
         ),
     )
 
@@ -49,7 +49,7 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     plate = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Scene/plate001",
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=[-1.55013, 2.05216, 0.80932],
+            pos=[-1.46817, 2.07344, 0.80932],
             rot=[1.0, 0.0, 0.0, 0.0]
         ),
     )
