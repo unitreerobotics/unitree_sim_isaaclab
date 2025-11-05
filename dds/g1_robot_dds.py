@@ -98,7 +98,7 @@ class G1RobotDDS(DDSObject):
             if imu and len(imu) >= 13:
                 imu_array = np.asarray(imu, dtype=np.float32)
 
-                imu_state.quaternion[:] = imu_array[[4, 5, 6, 3]]
+                imu_state.quaternion[:] = imu_array[[4, 5, 6, 3]] #[x,y,z,w]
 
                 imu_state.accelerometer[:] = imu_array[7:10]
 
