@@ -22,7 +22,7 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     scene = AssetBaseCfg(
         prim_path="/World/envs/env_.*/Scene",
         spawn=UsdFileCfg(
-            usd_path="/home/again/HealTH/Assets/scene.usd",  # use simple room model
+            usd_path="/home/nvidia/workspace/yunl/assets/lw_v1/surgery-room-dev-internal/assets/Assets/scene.usd",  # use simple room model
         ),
     )
     # Trocar (rigid object inside the loaded scene.usd)
