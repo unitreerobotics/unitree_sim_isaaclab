@@ -185,6 +185,6 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     )
 
     world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
-                                                    pos_offset=(-0.1, 3.6, 1.6),
-                                                    rot_offset=( -0.00617,0.00617, 0.70708, -0.70708),
+                                                    pos_offset=(-1.85014, 1.9196, 1.20101),
+                                                    rot_offset=(0.25631, 0.67412, -0.6475, -0.24618),
                                                     focal_length = 16.5)
