@@ -15,8 +15,8 @@ from tasks.common_config import   CameraBaseCfg  # isort: skip
 import os
 import torch
 project_root = os.environ.get("PROJECT_ROOT")
-usd_root = "/mnt/hdd/Data"
-# usd_root = "/home/nvidia/workspace/yunl/assets"
+# usd_root = "/mnt/hdd/Data"
+usd_root = "/home/nvidia/workspace/yunl/assets"
 @configclass
 class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scene configuration class
     """object table scene configuration class
