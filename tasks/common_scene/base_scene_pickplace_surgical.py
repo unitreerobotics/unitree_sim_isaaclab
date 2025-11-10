@@ -10,9 +10,13 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaacsim.core.utils.torch.rotations import euler_angles_to_quats
 from tasks.common_config import   CameraBaseCfg  # isort: skip
 import os
+import torch
 project_root = os.environ.get("PROJECT_ROOT")
+usd_root = "/mnt/hdd/Data"
+# usd_root = "/home/nvidia/workspace/yunl/assets"
 @configclass
 class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scene configuration class
     """object table scene configuration class
@@ -22,7 +26,7 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     scene = AssetBaseCfg(
         prim_path="/World/envs/env_.*/Scene",
         spawn=UsdFileCfg(
-            usd_path="/home/nvidia/workspace/yunl/assets/lw_v1/surgery-room-dev-internal/assets/Assets/scene.usd",  # use simple room model
+            usd_path=f"{usd_root}/lw_v1/surgery-room-dev-internal/assets/Assets/scene.usd",  # use simple room model
         ),
     )
     # Trocar (rigid object inside the loaded scene.usd)
@@ -183,8 +187,7 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), # light color (white)
                                      intensity=1000.0),    # light intensity
     )
-
     world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
                                                     pos_offset=(-1.85014, 1.9196, 1.20101),
-                                                    rot_offset=(0.25631, 0.67412, -0.6475, -0.24618),
-                                                    focal_length = 16.5)
+                                                    rot_offset=euler_angles_to_quats(torch.tensor([46.0, 180.0, 92.0]), degrees=True),
+                                                    focal_length = 13.0) 

@@ -9,7 +9,7 @@ from dataclasses import MISSING
 
 import isaaclab.envs.mdp as base_mdp
 from isaaclab.assets import ArticulationCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -140,6 +140,12 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
                                                      env_spacing=2.5, # environment spacing: 2.5 meter
                                                      replicate_physics=True # enable physics replication
                                                      )
+    # 2. viewer settings
+    viewer: ViewerCfg = ViewerCfg(
+        eye=(-1.9, 1.90, 1.20101),
+        lookat=(-1.2, 1.9, 0.6),
+        cam_prim_path="/OmniverseKit_Persp",
+    )
     # basic settings
     observations: ObservationsCfg = ObservationsCfg()   # observation configuration
     actions: ActionsCfg = ActionsCfg()                  # action configuration
