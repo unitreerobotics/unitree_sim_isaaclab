@@ -86,7 +86,7 @@ class CameraPresets:
     @classmethod
     def g1_front_camera(cls) -> CameraCfg:
         """front camera configuration"""
-        return CameraBaseCfg.get_camera_config()
+        return CameraBaseCfg.get_camera_config(focal_length=14.0)
     @classmethod
     def h12_front_camera(cls) -> CameraCfg:
         """front camera configuration"""
