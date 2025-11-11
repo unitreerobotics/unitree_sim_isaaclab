@@ -141,13 +141,13 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
             velocity_limit=10,
             stiffness={  # increase the stiffness (kp)
                  ".*_shoulder_.*_joint": 400.0,
-                 ".*_elbow_joint": 500.0,
+                 ".*_elbow_joint": 400.0,
                  ".*_wrist_.*_joint": 400.0,
             },
             damping={    # increase the damping (kd)
-                 ".*_shoulder_.*_joint": 40.0,
-                 ".*_elbow_joint": 40.0,
-                 ".*_wrist_.*_joint": 40.0,
+                 ".*_shoulder_.*_joint": 80.0,
+                 ".*_elbow_joint": 80.0,
+                 ".*_wrist_.*_joint": 80.0,
              },
             armature=None,
         ),
