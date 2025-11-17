@@ -21,7 +21,7 @@ from . import pick_box_healthcare_g1_29dof_dex3_env_cfg
 
 # Register the environment with Gymnasium
 gym.register(
-    id="Isaac-Pick-Box-Healthcare-G129-Dex3",
+    id="Isaac-Pick-Box-Healthcare-G129-Dex3-Wholebody",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     kwargs={
         "env_cfg_entry_point": pick_box_healthcare_g1_29dof_dex3_env_cfg.PickBoxHealthcareG129Dex3EnvCfg,

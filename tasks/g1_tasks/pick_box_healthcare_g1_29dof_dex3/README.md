@@ -87,7 +87,7 @@ The task is considered successful when the box is:
 import gymnasium as gym
 
 # Create the environment
-env = gym.make("Isaac-Pick-Box-Healthcare-G129-Dex3", num_envs=1)
+env = gym.make("Isaac-Pick-Box-Healthcare-G129-Dex3-Wholebody", num_envs=1)
 
 # Reset the environment
 obs, info = env.reset()
@@ -104,7 +104,7 @@ obs, reward, terminated, truncated, info = env.step(action)
 cd /home/nvidia/binliu/unitree_sim_isaaclab
 
 # Run the task
-python scripts/run_task.py --task Isaac-Pick-Box-Healthcare-G129-Dex3 --num_envs 1
+python sim_main.py --device cpu --enable_cameras --task Isaac-Pick-Box-Healthcare-G129-Dex3-Wholebody --enable_dex3_dds --robot_type g129
 ```
 
 ### Training Example
@@ -121,7 +121,7 @@ env_cfg.episode_length_s = 40.0  # Longer episodes
 
 # Create environment
 import gymnasium as gym
-env = gym.make("Isaac-Pick-Box-Healthcare-G129-Dex3", env_cfg=env_cfg)
+env = gym.make("Isaac-Pick-Box-Healthcare-G129-Dex3-Wholebody", env_cfg=env_cfg)
 ```
 
 ## File Structure

@@ -36,10 +36,9 @@ class HealthcareBoxPickSceneCfg(HealthcareBoxSceneCfg):
     
     # G1 robot with 29 DOF + Dex3 hands in wholebody control mode
     robot: ArticulationCfg = G1RobotPresets.g1_29dof_dex3_wholebody(
-        init_pos=(0.0, -1.0, 0.0),  # position robot in front of workspace
-        init_rot=(1, 0, 0, 0)
+        init_pos=(-5.0, -0.05, 0.8),  # position robot in front of workspace
+        init_rot=(1, 0, 0, 0),
     )
-
     # Contact force sensor for gripper feedback
     contact_forces = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/.*", 
@@ -178,14 +177,14 @@ class PickBoxHealthcareG129Dex3EnvCfg(ManagerBasedRLEnvCfg):
         # Physics material properties
         self.sim.physics_material.static_friction = 1.0
         self.sim.physics_material.dynamic_friction = 1.0
-        self.sim.physics_material.friction_combine_mode = "multiply"
-        self.sim.physics_material.restitution_combine_mode = "multiply"
+        self.sim.physics_material.friction_combine_mode = "max"  # Use max for better stability
+        self.sim.physics_material.restitution_combine_mode = "max"
         
         # Create event manager for dynamic scene control
         self.event_manager = SimpleEventManager()
         
         # Register box reset event - randomizes box position
-        self.event_manager.register("reset_box", SimpleEvent(
+        self.event_manager.register("reset_object_self", SimpleEvent(
             func=lambda env: base_mdp.reset_root_state_uniform(
                 env,
                 torch.arange(env.num_envs, device=env.device),
@@ -200,10 +199,9 @@ class PickBoxHealthcareG129Dex3EnvCfg(ManagerBasedRLEnvCfg):
         ))
         
         # Register full scene reset event
-        self.event_manager.register("reset_all", SimpleEvent(
+        self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
                 env,
                 torch.arange(env.num_envs, device=env.device)
             )
         ))
-
