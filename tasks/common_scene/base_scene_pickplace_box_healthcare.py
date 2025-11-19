@@ -44,8 +44,16 @@ class HealthcareBoxSceneCfg(InteractiveSceneCfg):
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 rigid_body_enabled=True,
                 kinematic_enabled=False,  # Dynamic, can be moved
+                disable_gravity=False,
+                linear_damping=0.005,  # Very low damping - easy to push (like wheels!)
+                angular_damping=0.005,  # Very low damping
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
             ),
-            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 1kg cart
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 1.0kg cart (matches ORCA)
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+            ),
         ),
     )
     
