@@ -5,6 +5,7 @@ from dataclasses import MISSING
 
 import isaaclab.envs.mdp as base_mdp
 from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.envs.common import ViewerCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -157,6 +158,13 @@ class PickBoxHealthcareG129Dex3EnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     curriculum = None  # no curriculum learning
     
+    # 4. Viewer settings - set default viewport camera perspective
+    viewer: ViewerCfg = ViewerCfg(
+        eye=(0.8, -1.0, 6.0),  # camera position matching world_camera config
+        lookat=(-4.5, -1.2, 1.0),  # look at workspace center (between robot and box)
+        origin_type="world"  # coordinates relative to world origin
+    )
+    
     def __post_init__(self):
         """Post initialization - configure simulation parameters"""
         # General settings
@@ -177,8 +185,8 @@ class PickBoxHealthcareG129Dex3EnvCfg(ManagerBasedRLEnvCfg):
         # Physics material properties
         self.sim.physics_material.static_friction = 1.0
         self.sim.physics_material.dynamic_friction = 1.0
-        self.sim.physics_material.friction_combine_mode = "max"  # Use max for better stability
-        self.sim.physics_material.restitution_combine_mode = "max"
+        self.sim.physics_material.friction_combine_mode = "multiply"  # Use max for better stability
+        self.sim.physics_material.restitution_combine_mode = "multiply"
         
         # Create event manager for dynamic scene control
         self.event_manager = SimpleEventManager()
@@ -205,3 +213,30 @@ class PickBoxHealthcareG129Dex3EnvCfg(ManagerBasedRLEnvCfg):
                 torch.arange(env.num_envs, device=env.device)
             )
         ))
+
+    @staticmethod
+    def apply_cart_low_friction(env):
+        """Apply low friction to cart to simulate wheels (call this after scene creation)"""
+        try:
+            from pxr import UsdPhysics, PhysxSchema
+            stage = env.sim.stage
+            
+            for env_idx in range(env.num_envs):
+                cart_path = f"/World/envs/env_{env_idx}/Cart"
+                cart_prim = stage.GetPrimAtPath(cart_path)
+                
+                if cart_prim and cart_prim.IsValid():
+                    # Apply physics material with low friction for wheels
+                    material_api = UsdPhysics.MaterialAPI.Apply(cart_prim)
+                    material_api.CreateStaticFrictionAttr().Set(0.0001)  # Low friction
+                    material_api.CreateDynamicFrictionAttr().Set(0.0001)  # Low friction
+                    material_api.CreateRestitutionAttr().Set(0.0)  # No bouncing
+                    
+                    # Apply PhysX material schema
+                    physx_material = PhysxSchema.PhysxMaterialAPI.Apply(cart_prim)
+                    physx_material.CreateFrictionCombineModeAttr().Set("min")  # Use minimum friction
+                    physx_material.CreateRestitutionCombineModeAttr().Set("min")
+                    
+                    print(f"✅ Applied low friction to Cart at {cart_path}")
+        except Exception as e:
+            print(f"⚠️  Failed to apply friction to cart: {e}")

@@ -179,6 +179,8 @@ def main():
         env_cfg.seed = args_cli.seed
         env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
         env.seed(args_cli.seed)
+        if hasattr(env_cfg, "apply_cart_low_friction"):
+            env_cfg.apply_cart_low_friction(env)
         try:
             sensors_dict = getattr(env.scene, "sensors", {})
             if sensors_dict:
@@ -490,11 +492,13 @@ def main():
                         try:
                             reset_category = reset_pose_cmd.get("reset_category")
                             # print(f"reset_category: {reset_category}")
-                            if (args_cli.enable_wholebody_dds and (reset_category == '1' or reset_category == '2')) or (not args_cli.enable_wholebody_dds and reset_category == '1'):
+                            if reset_category == '1':
+                                # Category 1: Reset object only
                                 print("reset object")
                                 env_cfg.event_manager.trigger("reset_object_self", env)
                                 reset_pose_dds.write_reset_pose_command(-1)
-                            elif reset_category == '2' and not args_cli.enable_wholebody_dds:
+                            elif reset_category == '2':
+                                # Category 2: Reset everything (robot + cart + object)
                                 print("reset all")
                                 env_cfg.event_manager.trigger("reset_all_self", env)
                                 reset_pose_dds.write_reset_pose_command(-1)

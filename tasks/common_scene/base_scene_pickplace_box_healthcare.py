@@ -10,6 +10,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from tasks.common_config import CameraBaseCfg  # isort: skip
+from tasks.common_scene.custom_spawners import spawn_usd_reference_direct  # isort: skip
 import os
 
 project_root = os.environ.get("PROJECT_ROOT")
@@ -57,29 +58,25 @@ class HealthcareBoxSceneCfg(InteractiveSceneCfg):
         ),
     )
     
-    # 3. Box object configuration for manipulation (optional, can be removed if only using cart)
+    # 3. ORCA Sterilization Container - realistic healthcare object for manipulation
     object = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Object",
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=[-3.0, -0.6, 1.3],  # initial position on table/workspace (in front of robot)
-            rot=[1.0, 0.0, 0.0, 0.0]  # initial rotation (identity quaternion)
+            pos=[-4.0, 0.6, 1.3],  # initial position on table/workspace (in front of robot)
+            rot=[0.7071, 0.0, 0.0, 0.7071]  # initial rotation (identity quaternion)
         ),
-        spawn=sim_utils.CuboidCfg(
-            size=(0.2, 0.2, 0.2),  # box dimensions: 20cm x 20cm x 20cm
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 100g box
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(
-                diffuse_color=(0.8, 0.3, 0.1),  # orange/brown box color
-                metallic=0.2,
-                roughness=0.8
+        spawn=UsdFileCfg(
+            func=spawn_usd_reference_direct,  # Use custom spawner for better compatibility
+            usd_path="omniverse://isaac-dev.ov.nvidia.com/Library/IsaacHealthcare/0.5.0/Props/OrcaScenes/Scene1DevMz/SurgicalRoom/Assets/SterilizationContainer002/SterilizationContainer002.usd",
+            scale=(1.0, 1.0, 1.0),  # use default scale
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                rigid_body_enabled=True,
+                kinematic_enabled=False,
+                disable_gravity=False,
             ),
-            physics_material=sim_utils.RigidBodyMaterialCfg(
-                friction_combine_mode="max",
-                restitution_combine_mode="max",
-                static_friction=1.0,
-                dynamic_friction=1.0,
-                restitution=0.0,
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.5),  # 500g sterilization container
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
             ),
         ),
     )
