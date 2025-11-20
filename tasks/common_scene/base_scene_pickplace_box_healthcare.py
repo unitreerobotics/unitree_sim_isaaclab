@@ -51,7 +51,7 @@ class HealthcareBoxSceneCfg(InteractiveSceneCfg):
                 max_linear_velocity=1000.0,
                 max_angular_velocity=1000.0,
             ),
-            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 1.0kg cart (matches ORCA)
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 100g cart (matches ORCA)
             collision_props=sim_utils.CollisionPropertiesCfg(
                 collision_enabled=True,
             ),
@@ -62,7 +62,7 @@ class HealthcareBoxSceneCfg(InteractiveSceneCfg):
     object = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Object",
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=[-4.0, 0.6, 1.3],  # initial position on table/workspace (in front of robot)
+            pos=[-4.5, 0.6, 1.0],  # initial position on table/workspace (in front of robot)
             rot=[0.7071, 0.0, 0.0, 0.7071]  # initial rotation (identity quaternion)
         ),
         spawn=UsdFileCfg(
@@ -74,7 +74,7 @@ class HealthcareBoxSceneCfg(InteractiveSceneCfg):
                 kinematic_enabled=False,
                 disable_gravity=False,
             ),
-            mass_props=sim_utils.MassPropertiesCfg(mass=0.5),  # 500g sterilization container
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.1),  # 100g sterilization container
             collision_props=sim_utils.CollisionPropertiesCfg(
                 collision_enabled=True,
             ),
