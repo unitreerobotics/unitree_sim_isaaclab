@@ -22,52 +22,61 @@ class SurgicalSceneCfg(InteractiveSceneCfg): # inherit from the interactive scen
     """object table scene configuration class
     defines a complete scene containing robot, object, table, etc.
     """
-      # 1. room wall configuration - simplified configuration to avoid rigid body property conflicts
     scene = AssetBaseCfg(
         prim_path="/World/envs/env_.*/Scene",
         spawn=UsdFileCfg(
-            usd_path=f"{usd_root}/lw_v2/scene.usd",  # use simple room model
+            usd_path=f"{usd_root}/lw_v2/scene_v2.usd",  # use simple room model
         ),
     )
-    # Trocar (rigid object inside the loaded scene.usd)
-    # trocar_1 = RigidObjectCfg(
-    #     prim_path="/World/envs/env_.*/Scene/Trocar002",
-    #     init_state=RigidObjectCfg.InitialStateCfg(
-    #         pos=[-1.61873, 1.9629, 0.82559],
-    #         rot=[0.60545, 0.00148, -0.72054, -0.33799]
-    #     ),
-    # )
-    # trocar_2 = RigidObjectCfg(
-    #     prim_path="/World/envs/env_.*/Scene/DisposableLaparoscopicPunctureDevice001",
-    #     init_state=RigidObjectCfg.InitialStateCfg(
-    #         pos=[-1.52635, 2.09436, 0.85483],
-    #         rot=[0.63046, -0.59294, -0.33848, 0.36928]
-    #     ),
-    # )
 
-    # Cart (example)
-    # cart = RigidObjectCfg(
-    #     prim_path="/World/envs/env_.*/Cart001"
-    # )
-    # Plate (example)
-    # plate = RigidObjectCfg(
-    #     prim_path="/World/envs/env_.*/Scene/plate001",
-    #     init_state=RigidObjectCfg.InitialStateCfg(
-    #         pos=[-1.46817, 2.07344, 0.80932],
-    #         rot=[1.0, 0.0, 0.0, 0.0]
-    #     ),
-    # )
-
+    trocar_1 = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/trocar_1",
+        spawn=UsdFileCfg(
+            usd_path=f"{usd_root}/lw_v2/Assets/Trocar002/Trocar002_wo.usd",
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                rigid_body_enabled=True,
+                disable_gravity=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                # low penetration recovery velocity, avoid sudden popping (critical!)
+                max_depenetration_velocity=1.0,
+            ),
+            # collision properties: important for articulation interaction
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+                contact_offset=0.01,       # increase to 0.01, important for articulation interaction
+                rest_offset=-0.001,        # negative value allows slight overlap, improve stability
+            ),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(
+            # pos=[-1.55953, 2.00288, 0.83483],
+            pos=[-1.56134, 2.00047, 0.83483],
+            # rot=[0.17602, -0.70516, 0.18787, 0.66066]
+            rot=[0.09921, -0.72203, 0.1059, 0.67647]
+        ),
+    )
     
-    # 
+    trocar_2 = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/trocar_2",
+        spawn=UsdFileCfg(
+            usd_path=f"{usd_root}/lw_v2/Assets/DisposableLaparoscopicPunctureDevice001/DisposableLaparoscopicPunctureDevice003.usd",
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                rigid_body_enabled=True,
+                disable_gravity=False,
+            ),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=[-1.52635, 2.09436, 0.85483],
+            rot=[0.63046, -0.59294, -0.33848, 0.36928]
+        ),
+    )
+    
     # Lights
-    # 4. light configuration
     light = AssetBaseCfg(
         prim_path="/World/light",   # light in the scene
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), # light color (white)
                                      intensity=1000.0),    # light intensity
     )
-    # world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
-    #                                                 pos_offset=(-1.85014, 1.9196, 1.20101),
-    #                                                 rot_offset=euler_angles_to_quats(torch.tensor([46.0, 180.0, 92.0]), degrees=True),
-    #                                                 focal_length = 13.0) 
+

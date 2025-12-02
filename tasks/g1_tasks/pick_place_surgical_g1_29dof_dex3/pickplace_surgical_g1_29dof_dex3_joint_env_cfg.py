@@ -89,29 +89,82 @@ class ObservationsCfg:
 
 @configclass
 class TerminationsCfg:
+    """Termination conditions for the environment."""
+    
+    # Time out termination
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # success = DoneTerm(
-    #     func=mdp.object_moved,
+    
+    # Task success termination (all stages completed)
+    # task_success = DoneTerm(
+    #     func=mdp.task_success_termination,
+    #     time_out=False,  # This is a success termination, not a failure
     #     params={
-    #         "object_cfg": SceneEntityCfg("trocar_object"),
+    #         "asset_cfg1": SceneEntityCfg("trocar_1"),
+    #         "asset_cfg2": SceneEntityCfg("trocar_2"),
     #     }
     # )
-    # check if the object is out of the working range
-    # success = DoneTerm(func=mdp.reset_object_estimate)# use task completion check function
 
-def dummy_reward(env):
-    """Simple dummy reward function that returns zero for all environments"""
-    return torch.zeros(env.num_envs, device=env.device, dtype=torch.float)
 
 @configclass
 class RewardsCfg:
+    # lift_trocars = RewTerm(
+    #     func=mdp.lift_trocars_reward,
+    #     weight=2.0,
+    #     params={
+    #         "table_height": 0.85483,
+    #         "lift_threshold": 0.15,
+    #         "asset_cfg1": SceneEntityCfg("trocar_1"),
+    #         "asset_cfg2": SceneEntityCfg("trocar_2"),
+    #         # Stage transition thresholds
+    #         "insertion_dist_threshold": 0.03,
+    #         "insertion_angle_threshold": 0.15,
+    #         "placement_x_min": -1.8,
+    #         "placement_x_max": -1.4,
+    #         "placement_y_min": 1.5,
+    #         "placement_y_max": 1.8,
+    #     }
+    # )
+    
+    # insert_trocars = RewTerm(
+    #     func=mdp.trocar_insertion_reward,
+    #     weight=5.0,
+    #     params={
+    #         "dist_std": 0.1,
+    #         "angle_std": 0.2,
+    #         "angle_threshold": 0.15, # ~8.6 degrees tolerance
+    #         "asset_cfg1": SceneEntityCfg("trocar_1"),
+    #         "asset_cfg2": SceneEntityCfg("trocar_2"),
+    #     }
+    # )
+    
+    # placement_trocars = RewTerm(
+    #     func=mdp.trocar_placement_reward,
+    #     weight=1.0,
+    #     params={
+    #         "x_min": -1.8,
+    #         "x_max": -1.4,
+    #         "y_min": 1.5,
+    #         "y_max": 1.8,
+    #         "asset_cfg1": SceneEntityCfg("trocar_1"),
+    #         "asset_cfg2": SceneEntityCfg("trocar_2"),
+    #     }
+    # )
     pass
-    reward = RewTerm(func=dummy_reward,weight=1.0)
-
 @configclass
 class EventCfg:
-    pass
-    # reset_scene = EventTermCfg(func=mdp.reset_scene_to_default, mode="reset")
+    """Event configuration for scene reset."""
+    
+    # # Reset scene when episode terminates (timeout or success)
+    # reset_scene = EventTermCfg(
+    #     func=base_mdp.reset_scene_to_default,
+    #     mode="reset"
+    # )
+    
+    # # Reset task stage tracker when environment resets
+    # reset_task_stage = EventTermCfg(
+    #     func=mdp.reset_task_stage,
+    #     mode="reset"
+    # )
     # reset_object = EventTermCfg(
     #     func=mdp.reset_root_state_uniform,  # use uniform distribution reset function
     #     mode="reset",   # set event mode to reset
@@ -165,7 +218,10 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
         # self.sim.dt = 0.005
         self.sim.dt = 1/200
         self.sim.render_interval = self.decimation
-        self.sim.physx.bounce_threshold_velocity = 0.01
+        # self.sim.physx.bounce_threshold_velocity = 0.2
+        # self.sim.physics_material.restitution = 0.0
+        # self.sim.physics_material.friction_combine_mode = "max"       # 摩擦力合并模式
+        # self.sim.physics_material.restitution_combine_mode = "min"  
         # self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         # self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         # self.sim.physx.friction_correlation_distance = 0.00625
@@ -177,26 +233,19 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
             "rtx.raytracing.fractionalCutoutOpacity": True,
         }
 
-        # self.sim.num_substeps = 4
-        # self.sim.physx.num_position_iterations = 16
-        # self.sim.physx.num_velocity_iterations = 4
-
 
         # create event manager
         self.event_manager = SimpleEventManager()
 
-        # register "reset object" event
-        # self.event_manager.register("reset_object_self", SimpleEvent(
-        #     func=lambda env: base_mdp.reset_root_state_uniform(
-        #         env,
-        #         torch.arange(env.num_envs, device=env.device),
-        #         pose_range={"x": [-0.05, 0.05], "y": [0.0, 0.05]},
-        #         velocity_range={},
-        #         asset_cfg=SceneEntityCfg("object"),
-        #     )
-        # ))
         self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
+                env,
+                torch.arange(env.num_envs, device=env.device))
+        ))
+        
+        # Register task stage reset event
+        self.event_manager.register("reset_task_stage", SimpleEvent(
+            func=lambda env: mdp.reset_task_stage(
                 env,
                 torch.arange(env.num_envs, device=env.device))
         ))

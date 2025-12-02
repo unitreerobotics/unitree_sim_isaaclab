@@ -10,7 +10,8 @@ import os
 project_root = os.environ.get("PROJECT_ROOT")
 G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{project_root}/assets/robots/g1-29dof-dex3-base-fix-usd/g1_29dof_with_dex3_base_fix.usd",
+        # usd_path=f"{project_root}/assets/robots/g1-29dof-dex3-base-fix-usd/g1_29dof_with_dex3_base_fix.usd",
+        usd_path="/home/nvidia/workspace/yunl/assets/lw_v2/robots/g1_29dof_with_dex3_base_fix.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
@@ -138,6 +139,18 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
                 ".*_wrist_.*_joint"
             ],
             effort_limit=5,
+            # velocity_limit=None,
+            #  stiffness={  # increase the stiffness (kp)
+            #      ".*_shoulder_.*_joint": 300.0,
+            #      ".*_elbow_joint": 400.0,
+            #      ".*_wrist_.*_joint": 400.0,
+            # },
+            #  damping={    # increase the damping (kd)
+            #      ".*_shoulder_.*_joint": 30.0,
+            #      ".*_elbow_joint": 25.0,
+            #      ".*_wrist_.*_joint": 25.0,
+            #  },
+            # lw setting:
             velocity_limit=10,
             stiffness={  # increase the stiffness (kp)
                  ".*_shoulder_.*_joint": 400.0,

@@ -171,7 +171,7 @@ def main():
 
     # parse environment configuration
     try:
-        env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=1)
+        env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=3)
         env_cfg.env_name = args_cli.task
     except Exception as e:
         print(f"Failed to parse environment configuration: {e}")
