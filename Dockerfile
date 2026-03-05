@@ -61,7 +61,7 @@ WORKDIR /home/code
 # 克隆并安装 IsaacLab
 RUN git clone https://github.com/isaac-sim/IsaacLab.git && \
     cd IsaacLab && \
-    ./isaaclab.sh --install
+    printf "Yes\n" | ./isaaclab.sh --install
     
 # 构建 CycloneDDS
 RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x /cyclonedds && \
