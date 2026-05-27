@@ -23,6 +23,10 @@ class DDSRLActionProvider(ActionProvider):
         self.enable_dex3 = args_cli.enable_dex3_dds
         self.enable_inspire = args_cli.enable_inspire_dds
         self.wh = args_cli.enable_wholebody_dds
+        # When True, GR00T-WBC Balance/Walk ONNX runs INSIDE this process
+        # from tick 1 (no DDS round-trip). nav_cmd still comes from the
+        # rt/run_command/cmd topic; bundled policy.onnx is disabled.
+        self.wbc_internal = bool(getattr(args_cli, "wbc_internal", False))
         self.policy_path = f"{project_root}/"+args_cli.model_path
         self.env = env
         # Initialize DDS communication
@@ -33,8 +37,26 @@ class DDSRLActionProvider(ActionProvider):
         self.run_command = None
         self._setup_dds()
         self._setup_joint_mapping()
-        self.policy = self.load_policy(self.policy_path)
-        
+        # Skip loading the bundled policy under wbc_internal — the
+        # GR00T-WBC checkpoints drive legs+waist instead.
+        if self.wbc_internal:
+            self.policy = None
+        else:
+            self.policy = self.load_policy(self.policy_path)
+
+        # GR00T-WBC inference (Balance/Walk ONNX) — instantiated under
+        # --wbc_internal. Checkpoint directory is overridable via the
+        # GROOT_WBC_ONNX_DIR env var.
+        self._wbc_ctrl = None
+        if self.wbc_internal:
+            from control.lower_body_controller import LowerBodyController
+            onnx_dir = os.environ.get(
+                "GROOT_WBC_ONNX_DIR",
+                os.path.join(project_root or ".", "assets/model/groot_wbc"),
+            )
+            self._wbc_ctrl = LowerBodyController(onnx_dir=onnx_dir)
+            print(f"[{self.name}] WBC internal: loaded Balance + Walk ONNX from {onnx_dir}")
+
         # 预计算索引张量与复用缓冲
         device = self.env.device
         if hasattr(self, "arm_joint_mapping") and self.arm_joint_mapping:
@@ -70,6 +92,33 @@ class DDSRLActionProvider(ActionProvider):
         
         self._full_action_buf = torch.zeros(len(self.all_joint_names), device=device, dtype=torch.float32)
         self._positions_buf = torch.empty(29, device=device, dtype=torch.float32)
+
+        # WBC leg + waist USD-index tensors, used by --wbc_internal to
+        # write the 15-D ONNX output into the composite-asset joint
+        # targets. Joint names are the canonical 15-joint WBC order.
+        _WBC_LEG_NAMES = [
+            "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint",
+            "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
+            "right_hip_pitch_joint", "right_hip_roll_joint", "right_hip_yaw_joint",
+            "right_knee_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
+        ]
+        _WBC_WAIST_NAMES = ["waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint"]
+        try:
+            self._wbc_leg_target_idx_t = torch.tensor(
+                [self.joint_to_index[n] for n in _WBC_LEG_NAMES],
+                dtype=torch.long, device=device,
+            )
+            self._wbc_waist_target_idx_t = torch.tensor(
+                [self.joint_to_index[n] for n in _WBC_WAIST_NAMES],
+                dtype=torch.long, device=device,
+            )
+        except KeyError as _e:
+            # Asset is missing one of the WBC joint names — wbc_internal
+            # cannot run. Bundled-policy path is unaffected.
+            print(f"[{self.name}] WBC index setup skipped (joint not found): {_e}")
+            self._wbc_leg_target_idx_t = None
+            self._wbc_waist_target_idx_t = None
+
         if self.enable_gripper:
             self._gripper_buf = torch.empty(2, device=device, dtype=torch.float32)
         if self.enable_dex3:
@@ -372,16 +421,105 @@ class DDSRLActionProvider(ActionProvider):
         current_actor_obs = self.compute_observations()
         action = self.policy(current_actor_obs)
         return action
+
+    def _wbc_internal_step(self) -> Optional[torch.Tensor]:
+        """Run GR00T-WBC Balance/Walk ONNX in-process. Returns a 15-D
+        tensor of absolute joint targets (12 legs + 3 waist) in WBC
+        joint order, or None if WBC isn't loaded."""
+        if self._wbc_ctrl is None:
+            return None
+        import numpy as _np
+        # Pull current state from IsaacLab directly — no DDS round-trip.
+        # Works from tick 1, before any external publisher would be up.
+        data = self.env.scene["robot"].data
+        jp = data.joint_pos[0].detach().cpu().numpy()
+        jv = data.joint_vel[0].detach().cpu().numpy()
+        # Build USD-index list for the 29-D canonical body order on first
+        # call, then reuse.
+        if not hasattr(self, "_wbc_body_name_indices"):
+            names = [
+                "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint",
+                "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
+                "right_hip_pitch_joint", "right_hip_roll_joint", "right_hip_yaw_joint",
+                "right_knee_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
+                "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint",
+                "left_shoulder_pitch_joint", "left_shoulder_roll_joint",
+                "left_shoulder_yaw_joint", "left_elbow_joint",
+                "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
+                "right_shoulder_pitch_joint", "right_shoulder_roll_joint",
+                "right_shoulder_yaw_joint", "right_elbow_joint",
+                "right_wrist_roll_joint", "right_wrist_pitch_joint", "right_wrist_yaw_joint",
+            ]
+            self._wbc_body_name_indices = [self.joint_to_index[n] for n in names]
+        body_idx = self._wbc_body_name_indices
+        legs_q = jp[body_idx[0:12]].astype(_np.float32)
+        waist_q = jp[body_idx[12:15]].astype(_np.float32)
+        arms_q = jp[body_idx[15:29]].astype(_np.float32)
+        legs_dq = jv[body_idx[0:12]].astype(_np.float32)
+        waist_dq = jv[body_idx[12:15]].astype(_np.float32)
+        arms_dq = jv[body_idx[15:29]].astype(_np.float32)
+        # Root quat (wxyz) from IsaacLab → WBC wants xyzw.
+        root_q_wxyz = data.root_quat_w[0].detach().cpu().numpy()
+        root_q_xyzw = _np.array(
+            [root_q_wxyz[1], root_q_wxyz[2], root_q_wxyz[3], root_q_wxyz[0]],
+            dtype=_np.float32,
+        )
+        proj_g = data.projected_gravity_b[0].detach().cpu().numpy().astype(_np.float32)
+        base_ang_vel = data.root_ang_vel_b[0].detach().cpu().numpy().astype(_np.float32)
+        # nav_cmd + height_cmd come from the existing rt/run_command/cmd
+        # DDS topic. Default to (0, 0, 0) + standing height when absent.
+        nav_cmd = _np.zeros(3, dtype=_np.float32)
+        height_cmd = 0.74
+        try:
+            rc = self.run_command_dds.get_run_command() if hasattr(self, "run_command_dds") else None
+            if rc and "run_command" in rc:
+                rcv = rc["run_command"]
+                rcl = ast.literal_eval(rcv) if isinstance(rcv, str) else rcv
+                if isinstance(rcl, (list, tuple)) and len(rcl) >= 4:
+                    nav_cmd[0] = float(rcl[0])
+                    nav_cmd[1] = float(rcl[1])
+                    nav_cmd[2] = float(rcl[2])
+                    height_cmd = float(rcl[3])
+        except Exception:
+            pass
+        lower_q = self._wbc_ctrl.step(
+            legs_q=legs_q, legs_dq=legs_dq,
+            waist_q=waist_q, waist_dq=waist_dq,
+            arms_q=arms_q, arms_dq=arms_dq,
+            base_quat_xyzw=root_q_xyzw,
+            base_ang_vel=base_ang_vel,
+            navigate_cmd=nav_cmd,
+            base_height_cmd=height_cmd,
+            projected_gravity=proj_g,
+        )
+        return torch.tensor(lower_q, dtype=torch.float32, device=self.env.device)
+
     def get_action(self, env) -> Optional[torch.Tensor]:
         """Get action from DDS"""
         try:
             full_action = self._full_action_buf
             full_action.zero_()
-            action_data = self.run_policy()
 
-            # RL 输出与腰部默认位姿
-            full_action[self.action_to_indices] = action_data
-            full_action[self.waist_to_all_indices] = self.default_waist_positions
+            if self.wbc_internal:
+                # In-process WBC: pull state from sim, run Balance/Walk
+                # ONNX, write 15-D lower-body output to legs (USD slots
+                # mapped from canonical 0..11) + waist (12..14).
+                lower_q = self._wbc_internal_step()
+                if lower_q is not None and self._wbc_leg_target_idx_t is not None:
+                    full_action.index_copy_(0, self._wbc_leg_target_idx_t, lower_q[:12])
+                    full_action.index_copy_(0, self._wbc_waist_target_idx_t, lower_q[12:15])
+                else:
+                    # WBC not ready (e.g., first tick before ONNX loaded
+                    # or asset missing a joint) — hold default standing pose.
+                    full_action[self.action_to_indices] = (
+                        self.default_action_positions[:, self.action_to_indices]
+                    )
+                    full_action[self.waist_to_all_indices] = self.default_waist_positions
+            else:
+                action_data = self.run_policy()
+                # RL 输出与腰部默认位姿
+                full_action[self.action_to_indices] = action_data
+                full_action[self.waist_to_all_indices] = self.default_waist_positions
             # 机器人指令（若有）
             if self.enable_robot == "g129" and self.robot_dds:
                 cmd_data = self.robot_dds.get_robot_command()
@@ -391,11 +529,16 @@ class DDSRLActionProvider(ActionProvider):
                         self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=self.env.device))
                         arm_vals = self._positions_buf.index_select(0, self._arm_source_idx_t)
                         full_action.index_copy_(0, self._arm_target_idx_t, arm_vals)
-            # 延时/裁剪/缩放
-            delayed_actions = self.action_buffer.compute(full_action[self.old_action_indices].unsqueeze(0))
-            cliped_actions = torch.clip(delayed_actions[:,self.action_to_indices], -self.clip_actions, self.clip_actions).to(self.env.device)
-            full_action[self.action_to_indices] = cliped_actions * self.action_scale + self.default_action_positions[:, self.action_to_indices]
-            
+            if not self.wbc_internal:
+                # 延时/裁剪/缩放 — bundled-policy mode only.
+                # --wbc_internal already wrote absolute joint targets
+                # (action_scale + default_angles applied inside
+                # LowerBodyController.step), so re-scaling here would
+                # corrupt the WBC output.
+                delayed_actions = self.action_buffer.compute(full_action[self.old_action_indices].unsqueeze(0))
+                cliped_actions = torch.clip(delayed_actions[:,self.action_to_indices], -self.clip_actions, self.clip_actions).to(self.env.device)
+                full_action[self.action_to_indices] = cliped_actions * self.action_scale + self.default_action_positions[:, self.action_to_indices]
+
             # 夹爪/手指（若有）
             if self.gripper_dds and hasattr(self, "_gripper_source_idx_t"):
                 gripper_cmd = self.gripper_dds.get_gripper_command()

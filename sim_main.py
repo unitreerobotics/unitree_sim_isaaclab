@@ -53,6 +53,11 @@ parser.add_argument("--profile_interval", type=int, default=500, help="performan
 parser.add_argument("--model_path", type=str, default="assets/model/policy.onnx", help="model path")
 parser.add_argument("--reward_interval", type=int, default=10, help="step interval for reward calculation")
 parser.add_argument("--enable_wholebody_dds", action="store_true", default=False, help="enable wh dds")
+parser.add_argument("--wbc_internal", action="store_true", default=False,
+                    help="Run NVIDIA GR00T-WholeBodyControl Balance/Walk ONNX inside the "
+                         "action_provider (no DDS round-trip). Locomotion commands still "
+                         "come from rt/run_command/cmd. WBC starts driving legs from "
+                         "tick 1 — bundled policy.onnx is disabled.")
 
 parser.add_argument("--physics_dt", type=float, default=None, help="physics time step, e.g., 0.005")
 parser.add_argument("--render_interval", type=int, default=None, help="render interval steps (>=1)")
