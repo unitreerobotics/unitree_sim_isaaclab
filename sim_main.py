@@ -309,7 +309,9 @@ def main():
         except Exception as e:
             print(f"[camera] failed to apply writer options: {e}")
     except Exception as e:
+        import traceback
         print(f"\nFailed to create environment: {e}")
+        traceback.print_exc()
         return
     
     # get robot stiffness and damping parameters from runtime environment
