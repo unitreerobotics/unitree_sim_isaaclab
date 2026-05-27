@@ -13,22 +13,36 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from tasks.common_config import   CameraBaseCfg  # isort: skip
 import os
 project_root = os.environ.get("PROJECT_ROOT")
+_SUPPRESS_ROOM_WALLS = os.environ.get("UNITREE_SIM_SUPPRESS_ROOM_WALLS", "0") == "1"
+
+
 @configclass
 class TableCylinderSceneCfgWH(InteractiveSceneCfg): # inherit from the interactive scene configuration class
     """object table scene configuration class
     defines a complete scene containing robot, object, table, etc.
+
+    Setting ``UNITREE_SIM_SUPPRESS_ROOM_WALLS=1`` in the environment swaps the
+    warehouse mesh out for a plain ground plane. The walls don't carry any
+    task semantics — they're decorative — but they block the default world
+    camera view of the robot, which makes headed development awkward.
     """
-      # 1. room wall configuration - simplified configuration to avoid rigid body property conflicts
-    room_walls = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/Room",
-        init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.0, 0.0, 0],  # room center point
-            rot=[1.0, 0.0, 0.0, 0.0]
-        ),
-        spawn=UsdFileCfg(
-            usd_path=f"{project_root}/assets/objects/small_warehouse/small_warehouse_digital_twin.usd",
-        ),
-    )
+    if _SUPPRESS_ROOM_WALLS:
+        ground = AssetBaseCfg(
+            prim_path="/World/Ground",
+            spawn=GroundPlaneCfg(),
+        )
+    else:
+        # 1. room wall configuration - simplified configuration to avoid rigid body property conflicts
+        room_walls = AssetBaseCfg(
+            prim_path="/World/envs/env_.*/Room",
+            init_state=AssetBaseCfg.InitialStateCfg(
+                pos=[0.0, 0.0, 0],  # room center point
+                rot=[1.0, 0.0, 0.0, 0.0]
+            ),
+            spawn=UsdFileCfg(
+                usd_path=f"{project_root}/assets/objects/small_warehouse/small_warehouse_digital_twin.usd",
+            ),
+        )
 
 
         # 1. table configuration
