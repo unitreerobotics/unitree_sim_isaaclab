@@ -99,10 +99,11 @@ def get_robot_dex3_joint_states(
         torch.Tensor
     """
     # get the gripper joint positions, velocities, torques
-    joint_pos = env.scene["robot"].data.joint_pos
-    joint_vel = env.scene["robot"].data.joint_vel  
-    joint_torque = env.scene["robot"].data.applied_torque
-    device = joint_pos.device
+    # HANDSIM PATCH 2026-05-26: see g1_29dof_state.py — same prepare_terms device mix.
+    device = env.device
+    joint_pos = env.scene["robot"].data.joint_pos.to(device)
+    joint_vel = env.scene["robot"].data.joint_vel.to(device)
+    joint_torque = env.scene["robot"].data.applied_torque.to(device)
     batch = joint_pos.shape[0]
     
 

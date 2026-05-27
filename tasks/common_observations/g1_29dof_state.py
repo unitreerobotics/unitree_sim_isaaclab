@@ -156,10 +156,14 @@ def get_robot_boy_joint_states(
         - the last 29 elements are joint torques
     """
     # get all joint states
-    joint_pos = env.scene["robot"].data.joint_pos
-    joint_vel = env.scene["robot"].data.joint_vel
-    joint_torque = env.scene["robot"].data.applied_torque  # use applied_torque to get joint torques
-    device = joint_pos.device
+    # HANDSIM PATCH 2026-05-26: on the first call (ObservationManager._prepare_terms,
+    # before any sim step) joint_pos can still live on CPU while applied_torque is
+    # already on cuda:0 — that mixes devices in the torch.gather below. Force
+    # everything onto env.device so the cache + gather stay consistent.
+    device = env.device
+    joint_pos = env.scene["robot"].data.joint_pos.to(device)
+    joint_vel = env.scene["robot"].data.joint_vel.to(device)
+    joint_torque = env.scene["robot"].data.applied_torque.to(device)
     batch = joint_pos.shape[0]
 
     # 预计算并缓存索引张量（列索引）
