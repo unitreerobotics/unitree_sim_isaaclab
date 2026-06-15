@@ -14,11 +14,6 @@ ARG https_proxy
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 
-# 使用阿里云源
-RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.aliyun.com/ubuntu/|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirrors.aliyun.com/ubuntu/|g' /etc/apt/sources.list
-
-
 # 安装构建依赖（GCC 12 + GLU + Vulkan）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-12 g++-12 cmake build-essential unzip git-lfs \
@@ -61,7 +56,7 @@ WORKDIR /home/code
 # 克隆并安装 IsaacLab
 RUN git clone https://github.com/isaac-sim/IsaacLab.git && \
     cd IsaacLab && \
-    ./isaaclab.sh --install
+    echo "Yes" | ./isaaclab.sh --install
     
 # 构建 CycloneDDS
 RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x /cyclonedds && \
@@ -99,7 +94,8 @@ ENV OMNI_KIT_DISABLE_STARTUP=1
 
 # 安装运行时依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglu1-mesa git-lfs zenity unzip \
+    libglu1-mesa git-lfs zenity unzip openssl \
+    libxt6 libxrandr2 libxcursor1 libxi6 libxinerama1 libxxf86vm1 \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制 Conda 环境和代码
@@ -109,6 +105,13 @@ COPY --from=builder /home/code/unitree_sdk2_python /home/code/unitree_sdk2_pytho
 COPY --from=builder /cyclonedds /cyclonedds
 COPY --from=builder /opt/conda /opt/conda
 COPY --from=builder /home/code/unitree_sim_isaaclab /home/code/unitree_sim_isaaclab
+
+# 生成 WebRTC 所需的自签名 TLS 证书
+RUN openssl req -x509 -newkey rsa:2048 \
+    -keyout /home/code/unitree_sim_isaaclab/teleimager/key.pem \
+    -out /home/code/unitree_sim_isaaclab/teleimager/cert.pem \
+    -days 3650 -nodes -subj "/CN=localhost" \
+    -addext "subjectAltName=IP:127.0.0.1"
 
 
 ENV CYCLONEDDS_HOME=/cyclonedds/install
