@@ -14,7 +14,7 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-sudo apt-get update && sudo apt-get install -y cmake build-essential openssl git-lfs unzip
+# cmake/build-essential/openssl/git-lfs/unzip installed manually beforehand (no passwordless sudo in this environment)
 
 ISAAC_VERSION=$1
 ENV_NAME=$2
@@ -88,12 +88,15 @@ git submodule update --init --depth 1
 
 echo "**************************************************"
 echo "Generate certificate files..."
-echo "Just keep pressing the Enter key."
-echo "**************************************************"   
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
+echo "**************************************************"
 mkdir -p ~/.config/xr_teleoperate/
-cp key.pem cert.pem ~/.config/xr_teleoperate/
-rm key.pem cert.pem
+if [ ! -f ~/.config/xr_teleoperate/cert.pem ]; then
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/CN=xr-teleoperate"
+    cp key.pem cert.pem ~/.config/xr_teleoperate/
+    rm key.pem cert.pem
+else
+    echo "Existing cert found at ~/.config/xr_teleoperate/, keeping it."
+fi
 
 
 echo "**************************************************"

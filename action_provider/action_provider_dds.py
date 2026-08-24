@@ -14,6 +14,11 @@ class DDSActionProvider(ActionProvider):
         self.enable_dex3 = args_cli.enable_dex3_dds
         self.enable_inspire = args_cli.enable_inspire_dds
         self.env = env
+        if self.env.num_envs != 1:
+            raise ValueError(
+                "DDS teleoperation requires num_envs == 1; "
+                f"received {self.env.num_envs}"
+            )
         # Initialize DDS communication
         self.robot_dds = None
         self.gripper_dds = None
@@ -65,6 +70,10 @@ class DDSActionProvider(ActionProvider):
             self.arm_action_pose_indices = [self.arm_joint_mapping[name] for name in self.arm_joint_mapping.keys()]
             self._arm_target_indices = [self.joint_to_index[name] for name in self.arm_joint_mapping.keys()]
             self._arm_source_indices = [idx + 15 for idx in self.arm_joint_mapping.values()]  # source data from positions[15:]
+            self._waist_yaw_target_index = self.joint_to_index["waist_yaw_joint"]
+            self._waist_yaw_source_index = 12
+            self._waist_pitch_target_index = self.joint_to_index["waist_pitch_joint"]
+            self._waist_pitch_source_index = 14
         elif self.enable_robot == "h1_2":
             self.arm_joint_mapping = {
                 "left_shoulder_pitch_joint": 0,
@@ -168,6 +177,12 @@ class DDSActionProvider(ActionProvider):
         if self.enable_gripper:
             self._gripper_target_idx_t = torch.tensor(self._gripper_target_indices, dtype=torch.long, device=device)
             self._gripper_source_idx_t = torch.tensor(self._gripper_source_indices, dtype=torch.long, device=device)
+            # DDS carries absolute Dex1 joint targets. JointPositionActionCfg
+            # adds the robot's default pose, so remove that pose here to keep
+            # the commanded physical target exact (notably -0.02 -> 0.0245).
+            self._gripper_default_offsets = self.env.scene["robot"].data.default_joint_pos[0].index_select(
+                0, self._gripper_target_idx_t
+            ).clone()
         if self.enable_dex3:
             self._left_hand_target_idx_t = torch.tensor(self._left_hand_target_indices, dtype=torch.long, device=device)
             self._left_hand_source_idx_t = torch.tensor(self._left_hand_source_indices, dtype=torch.long, device=device)
@@ -204,6 +219,8 @@ class DDSActionProvider(ActionProvider):
                         self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=self.env.device))
                         arm_vals = self._positions_buf.index_select(0, self._arm_source_idx_t)
                         full_action.index_copy_(0, self._arm_target_idx_t, arm_vals)
+                        full_action[self._waist_yaw_target_index] = self._positions_buf[self._waist_yaw_source_index]
+                        full_action[self._waist_pitch_target_index] = self._positions_buf[self._waist_pitch_source_index]
             elif self.enable_robot == "h1_2" and self.robot_dds:
                 cmd_data = self.robot_dds.get_robot_command()
                 if cmd_data and 'motor_cmd' in cmd_data:
@@ -224,6 +241,7 @@ class DDSActionProvider(ActionProvider):
                     if len(gripper_positions) >= 2:
                         self._gripper_buf.copy_(torch.tensor(gripper_positions[:2], dtype=torch.float32, device=self.env.device))
                         gp_vals = self._gripper_buf.index_select(0, self._gripper_source_idx_t)
+                        gp_vals = gp_vals - self._gripper_default_offsets
                         full_action.index_copy_(0, self._gripper_target_idx_t, gp_vals)
              
             elif self.dex3_dds:

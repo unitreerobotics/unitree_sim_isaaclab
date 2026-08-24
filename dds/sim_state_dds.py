@@ -33,7 +33,7 @@ class SimStateDDS(DDSObject):
         # setup the shared memory
         self.setup_shared_memory(
             input_shm_name="isaac_sim_state",  # read sim state data for publishing
-            input_size=4096,
+            input_size=16384,
             outputshm_flag=False
         )
 

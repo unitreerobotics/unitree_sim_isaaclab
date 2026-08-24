@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center"> unitree_sim_isaaclab </h1>
-  <h3 align="center"> Unitree Robotics </h3>
+  <h3 align="center"> Unitree Robotics Test </h3>
   <p align="center">
     <a> English </a> | <a href="README_zh-CN.md">中文</a> 
   </p>
@@ -204,7 +204,9 @@ python sim_main.py --device cpu  --enable_cameras  --task  Isaac-PickPlace-Cylin
 - `--task`: Task name, corresponding to the task names in the table above
 - `--enable_dex1_dds/--enable_dex3_dds`: Represent enabling DDS for two-finger gripper/three-finger dexterous hand respectively  
 - `--robot_type`: Robot type, currently has 29-DOF unitree g1 (g129),27-DoF H1-2
-- `--no_render`: Run without launching the Sim window and enable the WebRTC video stream. If running in a Docker environment, please add this parameter. You can use the Isaac Sim WebRTC Streaming Client to view the video feed.
+- `--headless`: Run without a Sim window while keeping offscreen RTX camera updates enabled. Use this for Meta Quest/xr_teleoperate.
+- `--no_render`: Suppress render updates. Do not use this for camera teleoperation because the head and wrist images will stop updating.
+- `--meta_quest`: Configure a supported red-block task for live Quest control. It enables all three cameras, selects the task's robot and hand DDS bridge, and uses teleimager ZMQ ports `55555`-`55557`. See [Meta Quest red-block teleoperation](infodocs/meta_quest_redblock_teleoperation.md).
 .
 
 **Note 1:** If you need to control robot movement, please refer to `send_commands_8bit.py` or `send_commands_keyboard.py` to publish control commands, or you can use them directly. Please note that only tasks marked with `Wholebody` are mobile tasks and can control the robot's movement.

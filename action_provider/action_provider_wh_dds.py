@@ -25,6 +25,11 @@ class DDSRLActionProvider(ActionProvider):
         self.wh = args_cli.enable_wholebody_dds
         self.policy_path = f"{project_root}/"+args_cli.model_path
         self.env = env
+        if self.env.num_envs != 1:
+            raise ValueError(
+                "DDS Wholebody teleoperation requires num_envs == 1; "
+                f"received {self.env.num_envs}"
+            )
         # Initialize DDS communication
         self.robot_dds = None
         self.gripper_dds = None
@@ -313,7 +318,10 @@ class DDSRLActionProvider(ActionProvider):
     def compute_current_observations(self):
         command = [0,0,0,0.8]  
         run_command = self.run_command_dds.get_run_command()
-        if run_command and 'run_command' in run_command:
+        command_is_fresh = (
+            time.monotonic() - self.run_command_dds.last_command_time < 0.25
+        )
+        if command_is_fresh and run_command and 'run_command' in run_command:
             run_command_data = run_command['run_command']
             
             if isinstance(run_command_data, str):
@@ -335,7 +343,6 @@ class DDSRLActionProvider(ActionProvider):
                 except (IndexError, TypeError) as e:
                     print(f"[WARNING] cannot parse run_command data: {run_command_data}, error: {e}")
             
-            self.run_command_dds.write_run_command([0.0,0,0,0.8])
       
         # command = [0.5,0.0,0.7,0.8]
         command = torch.tensor(command, device=self.env.device, dtype=torch.float32)
@@ -391,6 +398,8 @@ class DDSRLActionProvider(ActionProvider):
                         self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=self.env.device))
                         arm_vals = self._positions_buf.index_select(0, self._arm_source_idx_t)
                         full_action.index_copy_(0, self._arm_target_idx_t, arm_vals)
+                        # Quest right stick publishes waist yaw at G1 motor 12.
+                        full_action[self.waist_to_all_indices[0]] = self._positions_buf[12]
             # 延时/裁剪/缩放
             delayed_actions = self.action_buffer.compute(full_action[self.old_action_indices].unsqueeze(0))
             cliped_actions = torch.clip(delayed_actions[:,self.action_to_indices], -self.clip_actions, self.clip_actions).to(self.env.device)

@@ -16,3 +16,11 @@ gym.register(
     disable_env_checker=True,
 )
 
+gym.register(
+    id="Isaac-PickPlace-Hospital-G129-Dex1-Wholebody",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": pickplace_cylinder_g1_29dof_dex1_joint_env_cfg.PickPlaceHospitalG129DEX1WholebodyEnvCfg,
+    },
+    disable_env_checker=True,
+)

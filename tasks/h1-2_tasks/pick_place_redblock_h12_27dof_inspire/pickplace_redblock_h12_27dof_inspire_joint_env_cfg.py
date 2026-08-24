@@ -20,23 +20,56 @@ from . import mdp
 # use Isaac Lab native event system
 
 from tasks.common_config import  H12RobotPresets, CameraPresets  # isort: skip
-from tasks.common_event.event_manager import SimpleEvent, SimpleEventManager
-
 # import public scene configuration
-from tasks.common_scene.base_scene_pickplace_redblock import TableRedBlockSceneCfg
+import isaaclab.sim as sim_utils
+from isaaclab.assets import RigidObjectCfg
+from tasks.common_scene.base_scene_randomized_pickplace_cfg import RandomizedRoomPickPlaceSceneCfg
+from tasks.utils.room_randomizer import randomize_pickplace_room_layout
+from tasks.utils.room_randomizer.constants import ROOM_X_MAX, ROOM_X_MIN, ROOM_Y_MAX, ROOM_Y_MIN
+from tasks.utils.room_randomizer.pickplace_config import (
+    TABLE_PROP_NAMES,
+    WALL_PROP_NAMES,
+    register_randomized_room_reset_events,
+)
 
 ##
 # Scene definition
 ##
 
 @configclass
-class ObjectTableSceneCfg(TableRedBlockSceneCfg):
+class ObjectTableSceneCfg(RandomizedRoomPickPlaceSceneCfg):
     """object table scene configuration class
     
     inherits from G1SingleObjectSceneCfg, gets the complete G1 robot scene configuration
     can add task-specific scene elements or override default configurations here
     """
     
+    object = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Object",
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.35, 0.40, 0.84), rot=(1, 0, 0, 0)),
+        spawn=sim_utils.CuboidCfg(
+            size=(0.06, 0.06, 0.06),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=False,
+                retain_accelerations=False,
+            ),
+            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+                contact_offset=0.01,
+                rest_offset=0.0,
+            ),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0), metallic=0),
+            physics_material=sim_utils.RigidBodyMaterialCfg(
+                friction_combine_mode="max",
+                restitution_combine_mode="min",
+                static_friction=10,
+                dynamic_friction=1.5,
+                restitution=0.01,
+            ),
+        ),
+    )
+
     # Humanoid robot w/ arms higher
     # 5. humanoid robot configuration 
     robot: ArticulationCfg = H12RobotPresets.h12_27dof_inspire_base_fix(init_pos=(-4.2, -3.7, 0.76),
@@ -93,7 +126,16 @@ class ObservationsCfg:
 @configclass
 class TerminationsCfg:
     # check if the object is out of the working range
-    success = DoneTerm(func=mdp.reset_object_estimate)# use task completion check function
+    success = DoneTerm(
+        func=mdp.reset_object_estimate,
+        params={
+            "min_x": ROOM_X_MIN,
+            "max_x": ROOM_X_MAX,
+            "min_y": ROOM_Y_MIN,
+            "max_y": ROOM_Y_MAX,
+            "min_height": 0.25,
+        },
+    )
 
 @configclass
 class RewardsCfg:
@@ -101,19 +143,13 @@ class RewardsCfg:
 
 @configclass
 class EventCfg:
-    reset_object = EventTermCfg(
-        func=mdp.reset_root_state_uniform,  # use uniform distribution reset function
-        mode="reset",   # set event mode to reset
+    randomize_room_layout = EventTermCfg(
+        func=randomize_pickplace_room_layout,
+        mode="reset",
         params={
-            # position range parameter
-            "pose_range": {
-                "x": [-0.05, 0.05],  # x axis position range: -0.05 to 0.0 meter
-                "y": [-0.05, 0.05],   # y axis position range: 0.0 to 0.05 meter
-            },
-            # speed range parameter (empty dictionary means using default value)
-            "velocity_range": {},
-            # specify the object to reset
-            "asset_cfg": SceneEntityCfg("object"),
+            "wall_prop_names": WALL_PROP_NAMES,
+            "table_prop_names": TABLE_PROP_NAMES,
+            "min_table_objects": len(TABLE_PROP_NAMES),
         },
     )
 
@@ -126,7 +162,7 @@ class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
 
     # 1. scene settings
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=1, # environment number: 1
-                                                     env_spacing=2.5, # environment spacing: 2.5 meter
+                                                     env_spacing=16.0, # hospital room footprint needs wider spacing
                                                      replicate_physics=True # enable physics replication
                                                      )
     # basic settings
@@ -158,21 +194,4 @@ class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.num_velocity_iterations = 4
 
         # create event manager
-        self.event_manager = SimpleEventManager() 
-
-        # register "reset object" event
-        self.event_manager.register("reset_object_self", SimpleEvent(
-            func=lambda env: base_mdp.reset_root_state_uniform(
-                env,
-                torch.arange(env.num_envs, device=env.device),
-                pose_range={"x": [-0.05, 0.05], "y": [-0.05, 0.05]},
-                velocity_range={},
-                asset_cfg=SceneEntityCfg("object"),
-            )
-        ))
-        
-        self.event_manager.register("reset_all_self", SimpleEvent(
-            func=lambda env: base_mdp.reset_scene_to_default(
-                env,
-                torch.arange(env.num_envs, device=env.device))
-        ))
+        register_randomized_room_reset_events(self)

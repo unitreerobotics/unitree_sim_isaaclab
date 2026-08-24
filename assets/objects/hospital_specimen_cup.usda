@@ -1,0 +1,79 @@
+#usda 1.0
+(
+    defaultPrim = "SpecimenCup"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "SpecimenCup" (
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    float physics:mass = 0.08
+    bool physics:rigidBodyEnabled = 1
+    def Scope "Looks"
+    {
+        def Material "Cup"
+        {
+            token outputs:surface.connect = </SpecimenCup/Looks/Cup/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.92, 0.95, 0.78)
+                float inputs:opacity = 0.78
+                float inputs:roughness = 0.28
+                token outputs:surface
+            }
+        }
+        def Material "RedLid"
+        {
+            token outputs:surface.connect = </SpecimenCup/Looks/RedLid/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.84, 0.07, 0.08)
+                float inputs:roughness = 0.48
+                token outputs:surface
+            }
+        }
+        def Material "Label"
+        {
+            token outputs:surface.connect = </SpecimenCup/Looks/Label/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.96, 0.98, 1.0)
+                float inputs:roughness = 0.65
+                token outputs:surface
+            }
+        }
+    }
+    def Cylinder "Cup" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+    {
+        rel material:binding = </SpecimenCup/Looks/Cup>
+        uniform token axis = "Z"
+        double radius = 0.038
+        double height = 0.080
+        uniform token[] xformOpOrder = []
+        bool physics:collisionEnabled = 1
+    }
+    def Cylinder "LabelBand"
+    {
+        rel material:binding = </SpecimenCup/Looks/Label>
+        uniform token axis = "Z"
+        double radius = 0.0388
+        double height = 0.033
+        double3 xformOp:translate = (0, 0, -0.006)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    def Cylinder "Lid" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+    {
+        rel material:binding = </SpecimenCup/Looks/RedLid>
+        uniform token axis = "Z"
+        double radius = 0.043
+        double height = 0.014
+        double3 xformOp:translate = (0, 0, 0.047)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        bool physics:collisionEnabled = 1
+    }
+}

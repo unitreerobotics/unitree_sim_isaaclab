@@ -1,0 +1,138 @@
+#usda 1.0
+(
+    defaultPrim = "MedicineBottle"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "MedicineBottle" (
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    float physics:mass = 0.12
+    bool physics:rigidBodyEnabled = 1
+
+    def Scope "Looks"
+    {
+        def Material "AmberPlastic"
+        {
+            token outputs:surface.connect = </MedicineBottle/Looks/AmberPlastic/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.72, 0.22, 0.035)
+                float inputs:metallic = 0
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+
+        def Material "WhitePlastic"
+        {
+            token outputs:surface.connect = </MedicineBottle/Looks/WhitePlastic/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.92, 0.95, 0.97)
+                float inputs:metallic = 0
+                float inputs:roughness = 0.5
+                token outputs:surface
+            }
+        }
+
+        def Material "MedicalBlue"
+        {
+            token outputs:surface.connect = </MedicineBottle/Looks/MedicalBlue/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.03, 0.3, 0.72)
+                float inputs:roughness = 0.45
+                token outputs:surface
+            }
+        }
+
+        def Material "PrescriptionLabel"
+        {
+            token outputs:surface.connect = </MedicineBottle/Looks/PrescriptionLabel/Surface.outputs:surface>
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </MedicineBottle/Looks/PrescriptionLabel/Texture.outputs:rgb>
+                float inputs:metallic = 0
+                float inputs:roughness = 0.62
+                token outputs:surface
+            }
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @textures/hospital_pharmacy_label.png@
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </MedicineBottle/Looks/PrescriptionLabel/UV.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "UV"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                token inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+    }
+
+    def Cylinder "BottleBody" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </MedicineBottle/Looks/AmberPlastic>
+        uniform token axis = "Z"
+        double radius = 0.04
+        double height = 0.11
+        bool physics:collisionEnabled = 1
+    }
+
+    def Cylinder "Label"
+    {
+        rel material:binding = </MedicineBottle/Looks/WhitePlastic>
+        uniform token axis = "Z"
+        double radius = 0.0407
+        double height = 0.052
+        double3 xformOp:translate = (0, 0, -0.002)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "LabelMark"
+    {
+        rel material:binding = </MedicineBottle/Looks/MedicalBlue>
+        double size = 1
+        double3 xformOp:scale = (0.022, 0.002, 0.008)
+        double3 xformOp:translate = (0, -0.0409, 0.006)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    # A non-colliding front decal avoids distorting the rectangular pharmacy
+    # artwork around the procedural cylinder.
+    def Mesh "PrescriptionDecal"
+    {
+        rel material:binding = </MedicineBottle/Looks/PrescriptionLabel>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.034, -0.0412, -0.023), (0.034, -0.0412, -0.023), (0.034, -0.0412, 0.023), (-0.034, -0.0412, 0.023)]
+        normal3f[] normals = [(0, -1, 0)] (interpolation = "constant")
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "vertex")
+    }
+
+    def Cylinder "Cap" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </MedicineBottle/Looks/WhitePlastic>
+        uniform token axis = "Z"
+        double radius = 0.043
+        double height = 0.025
+        bool physics:collisionEnabled = 1
+        double3 xformOp:translate = (0, 0, 0.0675)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

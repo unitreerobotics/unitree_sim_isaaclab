@@ -1,0 +1,82 @@
+#usda 1.0
+(
+    defaultPrim = "GauzeBox"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "GauzeBox" (
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    float physics:mass = 0.10
+    bool physics:rigidBodyEnabled = 1
+    def Scope "Looks"
+    {
+        def Material "White"
+        {
+            token outputs:surface.connect = </GauzeBox/Looks/White/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.94, 0.97, 0.98)
+                float inputs:roughness = 0.72
+                token outputs:surface
+            }
+        }
+        def Material "MedicalBlue"
+        {
+            token outputs:surface.connect = </GauzeBox/Looks/MedicalBlue/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.03, 0.34, 0.72)
+                float inputs:roughness = 0.55
+                token outputs:surface
+            }
+        }
+        def Material "Red"
+        {
+            token outputs:surface.connect = </GauzeBox/Looks/Red/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.82, 0.04, 0.06)
+                float inputs:roughness = 0.5
+                token outputs:surface
+            }
+        }
+    }
+    def Cube "Box" (prepend apiSchemas = ["PhysicsCollisionAPI"])
+    {
+        rel material:binding = </GauzeBox/Looks/White>
+        double size = 1
+        double3 xformOp:scale = (0.15, 0.085, 0.065)
+        uniform token[] xformOpOrder = ["xformOp:scale"]
+        bool physics:collisionEnabled = 1
+    }
+    def Cube "BlueBand"
+    {
+        rel material:binding = </GauzeBox/Looks/MedicalBlue>
+        double size = 1
+        double3 xformOp:scale = (0.151, 0.086, 0.018)
+        double3 xformOp:translate = (0, 0, -0.012)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+    def Cube "CrossV"
+    {
+        rel material:binding = </GauzeBox/Looks/Red>
+        double size = 1
+        double3 xformOp:scale = (0.018, 0.002, 0.040)
+        double3 xformOp:translate = (0, -0.044, 0.008)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+    def Cube "CrossH"
+    {
+        rel material:binding = </GauzeBox/Looks/Red>
+        double size = 1
+        double3 xformOp:scale = (0.055, 0.002, 0.014)
+        double3 xformOp:translate = (0, -0.044, 0.008)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}

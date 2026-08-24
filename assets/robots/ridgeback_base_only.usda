@@ -1,0 +1,58 @@
+#usda 1.0
+(
+    defaultPrim = "ridgeback"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "ridgeback" (
+    prepend references = @https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Robots/Clearpath/RidgebackUr/ridgeback_ur5.usd@</ridgeback>
+)
+{
+    # Remove the complete UR5 chain, including its collision geometry.  Keeping
+    # only the Ridgeback chassis gives G1 an unobstructed delivery platform.
+    over "base_link"
+    {
+        over "ur_arm_shoulder_pan_joint" (
+            active = false
+        )
+        {
+        }
+    }
+
+    over "ur_arm_shoulder_link" (
+        active = false
+    )
+    {
+    }
+
+    over "ur_arm_upper_arm_link" (
+        active = false
+    )
+    {
+    }
+
+    over "ur_arm_forearm_link" (
+        active = false
+    )
+    {
+    }
+
+    over "ur_arm_wrist_1_link" (
+        active = false
+    )
+    {
+    }
+
+    over "ur_arm_wrist_2_link" (
+        active = false
+    )
+    {
+    }
+
+    over "ur_arm_wrist_3_link" (
+        active = false
+    )
+    {
+    }
+}

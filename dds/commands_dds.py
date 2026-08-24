@@ -6,6 +6,7 @@ Specialized in receiving the run command
 """
 
 import threading
+import time
 from typing import Any, Dict, Optional
 from dds.dds_base import DDSObject
 from unitree_sdk2py.core.channel import ChannelSubscriber
@@ -24,6 +25,7 @@ class RunCommandDDS(DDSObject):
         
         self._initialized = True
         self.node_name = node_name
+        self.last_command_time = 0.0
         # setup the shared memory
         self.setup_shared_memory(
             output_shm_name="isaac_run_command_cmd", 
@@ -64,6 +66,7 @@ class RunCommandDDS(DDSObject):
                 "run_command": msg.data
             }
             self.output_shm.write_data(cmd_data)
+            self.last_command_time = time.monotonic()
         except Exception as e:
             print(f"run_command_dds [{self.node_name}] Failed to process the subscribe data: {e}")
             return {}

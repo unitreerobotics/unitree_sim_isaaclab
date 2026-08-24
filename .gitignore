@@ -76,6 +76,7 @@ logs/
 videos/
 screenshots/
 *.usda
+!isaac-projects/new_base_room.usda
 
 
 # ROS 相关（如果使用）

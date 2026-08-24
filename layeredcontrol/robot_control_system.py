@@ -124,7 +124,12 @@ class RobotController:
                 pass
                 # self.env.sim.render()
             else:
-                self.env.step(action)
+                step_result = self.env.step(action)
+                if len(step_result) >= 4:
+                    _, _, terminated, time_outs = step_result[:4]
+                    if torch.any(terminated) or torch.any(time_outs):
+                        reset_kind = "timeout" if torch.any(time_outs) else "termination"
+                        print(f"[AUTO_RESET] env reset triggered by {reset_kind}", flush=True)
             env_time = perf_counter() - env_start
             
             self.step_count += 1

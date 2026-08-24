@@ -19,7 +19,8 @@ import os
 # Use separate shared memory for each image
 def get_shm_name(image_name: str) -> str:
     """Get shared memory name for a specific image"""
-    return f"isaac_{image_name}_image_shm"
+    prefix = os.getenv("ISAAC_IMAGE_SHM_PREFIX", "isaac")
+    return f"{prefix}_{image_name}_image_shm"
 
 SHM_SIZE_PER_IMAGE = 640 * 480 * 3 + 128  # ~1MB per image + header + buffer
 
@@ -426,4 +427,4 @@ class SharedMemoryReader:
         return images.get('head') if images else None
     
     def close(self):
-        self.multi_reader.close() 
+        self.multi_reader.close()

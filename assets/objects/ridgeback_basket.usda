@@ -1,0 +1,135 @@
+#usda 1.0
+(
+    defaultPrim = "Basket"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Basket"
+{
+    def Scope "Looks"
+    {
+        def Material "BasketMaterial"
+        {
+            token outputs:surface.connect = </Basket/Looks/BasketMaterial/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.08, 0.32, 0.62)
+                float inputs:metallic = 0.05
+                float inputs:roughness = 0.42
+                token outputs:surface
+            }
+        }
+
+        def Material "LogisticsLabel"
+        {
+            token outputs:surface.connect = </Basket/Looks/LogisticsLabel/Surface.outputs:surface>
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </Basket/Looks/LogisticsLabel/Texture.outputs:rgb>
+                float inputs:metallic = 0
+                float inputs:roughness = 0.58
+                token outputs:surface
+            }
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @textures/medical_supplies_bin_label.png@
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </Basket/Looks/LogisticsLabel/UV.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "UV"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                token inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+    }
+
+    def Cube "Bottom" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </Basket/Looks/BasketMaterial>
+        double size = 1
+        bool physics:collisionEnabled = 1
+        double3 xformOp:scale = (0.52, 0.36, 0.025)
+        double3 xformOp:translate = (0, 0, 0.0125)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "WallFront" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </Basket/Looks/BasketMaterial>
+        double size = 1
+        bool physics:collisionEnabled = 1
+        double3 xformOp:scale = (0.52, 0.025, 0.18)
+        double3 xformOp:translate = (0, 0.1675, 0.115)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "WallBack" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </Basket/Looks/BasketMaterial>
+        double size = 1
+        bool physics:collisionEnabled = 1
+        double3 xformOp:scale = (0.52, 0.025, 0.18)
+        double3 xformOp:translate = (0, -0.1675, 0.115)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "WallLeft" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </Basket/Looks/BasketMaterial>
+        double size = 1
+        bool physics:collisionEnabled = 1
+        double3 xformOp:scale = (0.025, 0.31, 0.18)
+        double3 xformOp:translate = (-0.2475, 0, 0.115)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "WallRight" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        rel material:binding = </Basket/Looks/BasketMaterial>
+        double size = 1
+        bool physics:collisionEnabled = 1
+        double3 xformOp:scale = (0.025, 0.31, 0.18)
+        double3 xformOp:translate = (0.2475, 0, 0.115)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "FrontLogisticsDecal"
+    {
+        rel material:binding = </Basket/Looks/LogisticsLabel>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.19, 0.1802, 0.055), (0.19, 0.1802, 0.055), (0.19, 0.1802, 0.175), (-0.19, 0.1802, 0.175)]
+        normal3f[] normals = [(0, 1, 0)] (interpolation = "constant")
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "vertex")
+    }
+
+    def Mesh "BackLogisticsDecal"
+    {
+        rel material:binding = </Basket/Looks/LogisticsLabel>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(0.19, -0.1802, 0.055), (-0.19, -0.1802, 0.055), (-0.19, -0.1802, 0.175), (0.19, -0.1802, 0.175)]
+        normal3f[] normals = [(0, -1, 0)] (interpolation = "constant")
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "vertex")
+    }
+}

@@ -17,10 +17,13 @@ import torch
 import gymnasium as gym
 from pathlib import Path
 
+from tools.meta_quest import MetaQuestConfigurationError, configure_meta_quest
+from tools.quest_camera_recorder import QuestCameraRecorder
+
 # Isaac Lab AppLauncher
 from isaaclab.app import AppLauncher
 
-from teleimager.image_server import run_isaacsim_server
+from tools.teleimager_compat import run_isaacsim_server
 from dds.dds_create import create_dds_objects,create_dds_objects_replay
 # add command line arguments
 parser = argparse.ArgumentParser(description="Unitree Simulation")
@@ -34,7 +37,18 @@ parser.add_argument("--robot_type", type=str, default="g129", help="robot type")
 parser.add_argument("--enable_dex1_dds", action="store_true", help="enable gripper DDS")
 parser.add_argument("--enable_dex3_dds", action="store_true", help="enable dexterous hand DDS")
 parser.add_argument("--enable_inspire_dds", action="store_true", help="enable inspire hand DDS")
+parser.add_argument(
+    "--meta_quest",
+    action="store_true",
+    help="configure a supported red-block task for live Meta Quest teleoperation via xr_teleoperate",
+)
 parser.add_argument("--stats_interval", type=float, default=10.0, help="statistics print interval (seconds)")
+parser.add_argument(
+    "--max_steps",
+    type=int,
+    default=None,
+    help="stop cleanly after this many control steps (useful for startup smoke tests)",
+)
 
 parser.add_argument("--file_path", type=str, default="/home/unitree/Code/xr_teleoperate/teleop/utils/data", help="file path (when action_source=file)")
 parser.add_argument("--generate_data_dir", type=str, default="./data", help="save data dir")
@@ -69,6 +83,12 @@ parser.add_argument("--skip_cvtcolor", action="store_true", default=False, help=
 
 parser.add_argument("--camera_jpeg", action="store_true", default=True, help="enable JPEG compression for camera frames")
 parser.add_argument("--camera_jpeg_quality", type=int, default=85, help="JPEG quality (1-100)")
+parser.add_argument(
+    "--quest_recording_fps",
+    type=float,
+    default=30.0,
+    help="frames per second for Quest X camera recordings",
+)
 
 parser.add_argument("--physx_substeps", type=int, default=None, help="physx substeps per step")
 parser.add_argument("--camera_include", type=str, default="front_camera,left_wrist_camera,right_wrist_camera", help="comma-separated camera names to enable")
@@ -76,17 +96,37 @@ parser.add_argument("--camera_exclude", type=str, default="world_camera", help="
 
 parser.add_argument("--env_reward_interval", type=int, default=5, help="environment reward compute interval (steps)")
 parser.add_argument("--seed", type=int, default=42, help="environment seed")
+parser.add_argument("--disable_auto_reset", action="store_true", default=False, help="disable task termination auto-resets")
 # add AppLauncher parameters
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
+try:
+    meta_quest_profile = configure_meta_quest(args_cli, os.environ)
+except MetaQuestConfigurationError as exc:
+    parser.error(str(exc))
+
+if meta_quest_profile is not None:
+    print(
+        "[Meta Quest] enabled cameras, ZMQ video, "
+        f"robot={meta_quest_profile.robot_type}, hand=--{meta_quest_profile.hand_flag}"
+    )
 if args_cli.no_render:
     os.environ["LIVESTREAM"] = str(args_cli.livestream_type)
     os.environ["PUBLIC_IP"] = args_cli.public_ip
 else:
     os.environ["LIVESTREAM"] = "0"
 
-if args_cli.enable_dex3_dds and args_cli.enable_dex1_dds and args_cli.enable_inspire_dds:
-    print("Error: enable_dex3_dds and enable_dex1_dds and enable_inspire_dds cannot be enabled at the same time")
+enabled_dds_flags = [
+    flag_name
+    for flag_name, enabled in (
+        ("enable_dex1_dds", args_cli.enable_dex1_dds),
+        ("enable_dex3_dds", args_cli.enable_dex3_dds),
+        ("enable_inspire_dds", args_cli.enable_inspire_dds),
+    )
+    if enabled
+]
+if len(enabled_dds_flags) > 1:
+    print(f"Error: DDS modes cannot be enabled at the same time: {', '.join(enabled_dds_flags)}")
     print("Please select one of the options")
     sys.exit(1)
 
@@ -101,6 +141,8 @@ from layeredcontrol.robot_control_system import (
 )
 
 from dds.reset_pose_dds import *
+from unitree_sdk2py.core.channel import ChannelPublisher
+from unitree_sdk2py.idl.std_msgs.msg.dds_ import String_
 import tasks
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
@@ -140,6 +182,7 @@ def setup_signal_handlers(controller,dds_manager=None,image_server=None):
 
 def main():
     """main function"""
+    camera_recorder = None
     # import cProfile
     # import pstats
     # import io
@@ -174,6 +217,9 @@ def main():
     try:
         env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=1)
         env_cfg.env_name = args_cli.task
+        if args_cli.disable_auto_reset:
+            env_cfg.terminations = None
+            print("[env] task termination auto-resets disabled")
     except Exception as e:
         print(f"Failed to parse environment configuration: {e}")
         return
@@ -308,6 +354,19 @@ def main():
                 print(f"[camera] failed to tune sensors: {e}")
         except Exception as e:
             print(f"[camera] failed to apply writer options: {e}")
+        try:
+            camera_recorder = QuestCameraRecorder(
+                Path.home() / "Desktop" / "G1_Camera_Recordings",
+                frames_per_second=args_cli.quest_recording_fps,
+            )
+            print(
+                "[Quest recording] X toggles camera capture; sessions save under "
+                f"{camera_recorder.desktop_directory}",
+                flush=True,
+            )
+        except Exception as e:
+            print(f"[Quest recording] unavailable: {e}", flush=True)
+            camera_recorder = None
     except Exception as e:
         print(f"\nFailed to create environment: {e}")
         return
@@ -356,7 +415,20 @@ def main():
             exposure=0.8,                
             focus_distance=1.2
         )
-    env.sim.reset()
+    # The environment startup above has already reset and initialized the
+    # simulation.  Repeating the SimulationContext reset with RTX cameras in
+    # headless mode can block indefinitely during offscreen initialization.
+    # The hospital Wholebody task already completed SimulationContext startup
+    # while constructing/resetting the environment.  A second reset with its
+    # four RTX cameras can block the GUI for several minutes just like the
+    # headless path, so skip that redundant reset in both modes.
+    skip_duplicate_sim_reset = (
+        getattr(args_cli, "headless", False)
+        or ("Hospital" in args_cli.task and "Wholebody" in args_cli.task)
+        or args_cli.task == "Isaac-PickPlace-Cylinder-G129-Dex1-Joint"
+    )
+    if not skip_duplicate_sim_reset:
+        env.sim.reset()
     env.reset()
     
     # create simplified control configuration
@@ -371,6 +443,7 @@ def main():
     
     # create controller
 
+    hospital_success_publisher = None
     if not args_cli.replay_data:
         print("========= create image server =========")
         try:
@@ -382,6 +455,11 @@ def main():
         print("========= create dds =========")
         try:
             reset_pose_dds,sim_state_dds,dds_manager = create_dds_objects(args_cli,env)
+            if args_cli.task == "Isaac-PickPlace-MedicineBottle-Hospital-G129-Dex1-Joint":
+                hospital_success_publisher = ChannelPublisher(
+                    "rt/isaaclab/hospital_success", String_
+                )
+                hospital_success_publisher.Init()
         except Exception as e:
             print(f"Failed to create dds: {e}")
             return
@@ -492,13 +570,32 @@ def main():
                     if reset_pose_cmd is not None:
                         try:
                             reset_category = reset_pose_cmd.get("reset_category")
-                            if (args_cli.enable_wholebody_dds and (reset_category == '1' or reset_category == '2')) or (not args_cli.enable_wholebody_dds and reset_category == '1'):
+                            if reset_category == '1':
                                 print("reset object")
                                 env_cfg.event_manager.trigger("reset_object_self", env)
                                 reset_pose_dds.write_reset_pose_command(-1)
-                            elif reset_category == '2' and not args_cli.enable_wholebody_dds:
+                            elif reset_category == '2':
                                 print("reset all")
                                 env_cfg.event_manager.trigger("reset_all_self", env)
+                                reset_pose_dds.write_reset_pose_command(-1)
+                            elif reset_category == '3':
+                                print("reset room with fixed table")
+                                env_cfg.event_manager.trigger("reset_room_fixed_table_self", env)
+                                reset_pose_dds.write_reset_pose_command(-1)
+                            elif reset_category == '4':
+                                print("advance Ridgeback to the next arc point")
+                                env_cfg.event_manager.trigger("reset_ridgeback_arc_self", env)
+                                reset_pose_dds.write_reset_pose_command(-1)
+                            elif reset_category == '5':
+                                if camera_recorder is None:
+                                    print("[Quest recording] recorder is unavailable", flush=True)
+                                else:
+                                    recording, recording_path = camera_recorder.toggle()
+                                    action = "started" if recording else "saved"
+                                    print(
+                                        f"[Quest recording] {action}: {recording_path}",
+                                        flush=True,
+                                    )
                                 reset_pose_dds.write_reset_pose_command(-1)
                         except Exception as e:
                             print(f"Failed to write reset pose command: {e}")
@@ -527,6 +624,20 @@ def main():
                 loop_dt = current_time - last_loop_time
                 last_loop_time = current_time
                 recent_loop_times.append(loop_dt)
+
+                # Hospital demo: summon Ridgeback only after a stable grasp,
+                # choosing the same side as the hand holding the object.
+                if args_cli.task in (
+                    "Isaac-PickPlace-Hospital-G129-Dex1-Wholebody",
+                    "Isaac-PickPlace-Cylinder-G129-Dex1-Joint",
+                ):
+                    try:
+                        from tasks.g1_tasks.pick_place_cylinder_g1_29dof_dex1.pickplace_cylinder_g1_29dof_dex1_joint_env_cfg import update_ridgeback_assistant
+                        update_ridgeback_assistant(env)
+                    except Exception as e:
+                        if not getattr(env, "_ridgeback_assistant_error_reported", False):
+                            print(f"[ridgeback assistant] disabled after error: {e}", flush=True)
+                            env._ridgeback_assistant_error_reported = True
                 
                 # keep recent 100 loop times
                 if len(recent_loop_times) > 100:
@@ -534,6 +645,21 @@ def main():
                 
                 # execute control step (in main thread, support rendering)
                 controller.step()
+                if camera_recorder is not None:
+                    camera_recorder.capture(env, time.monotonic())
+                if hospital_success_publisher is not None and getattr(
+                    env, "_hospital_success_reset_pending", False
+                ):
+                    env._hospital_success_reset_pending = False
+                    hospital_success_publisher.Write(String_(data="reset_like_y"))
+                    print(
+                        "[hospital success] fixed-table room reset complete; "
+                        "requested Quest torso recenter",
+                        flush=True,
+                    )
+                if args_cli.max_steps is not None and loop_count >= max(1, args_cli.max_steps):
+                    print(f"[sim] reached --max_steps={args_cli.max_steps}; stopping cleanly")
+                    break
 
                 # print statistics and loop frequency periodically
                 if current_time - last_stats_time >= args_cli.stats_interval:
@@ -581,6 +707,8 @@ def main():
     finally:
         # clean up resources
         print("\nclean up resources...")
+        if camera_recorder is not None:
+            camera_recorder.close()
         controller.cleanup()
         image_server.stop()
         env.close()

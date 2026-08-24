@@ -160,13 +160,13 @@ G129_CFG_WITH_DEX3_BASE_FIX = ArticulationCfg(
             effort_limit=300,
             velocity_limit=100.0,
             stiffness={
-                ".*": 100.0,
+                ".*": 300.0,
             },
             damping={
-                ".*": 10.0,
+                ".*": 5.0,
             },
             armature={
-                ".*": 0.1
+                ".*": 0.05
             },
         ),
     },
@@ -315,9 +315,9 @@ G129_CFG_WITH_DEX1_BASE_FIX = ArticulationCfg(
             ],
             effort_limit=None,  # increase the torque limit
             velocity_limit=None,  # set the velocity limit to 0
-            stiffness=800.0,    # increase the stiffness (kp)
-            damping=3.0,        # increase the damping (kd)
-            friction=200.0,
+            stiffness=2400.0,
+            damping=8.0,
+            friction=20.0,
             armature=None,
         ),
 
@@ -689,9 +689,9 @@ G129_CFG_WITH_DEX1_WHOLEBODY = ArticulationCfg(
             ],
             effort_limit=None,  # increase the torque limit
             velocity_limit=None,  # set the velocity limit to 0
-            stiffness=800.0,    # increase the stiffness (kp)
-            damping=3.0,        # increase the damping (kd)
-            friction=200.0,
+            stiffness=2400.0,
+            damping=8.0,
+            friction=20.0,
             armature=None,
         ),
     },
@@ -866,13 +866,13 @@ G129_CFG_WITH_DEX3_WHOLEBODY = ArticulationCfg(
             effort_limit=300,
             velocity_limit=100.0,
             stiffness={
-                ".*": 100.0,
+                ".*": 300.0,
             },
             damping={
-                ".*": 10.0,
+                ".*": 5.0,
             },
             armature={
-                ".*": 0.1
+                ".*": 0.05
             },
         ),
     },
