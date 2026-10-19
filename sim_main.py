@@ -146,24 +146,6 @@ def main():
     # profiler = cProfile.Profile()
     # profiler.enable()
     import os
-    import atexit
-    try:
-        os.setpgrp()
-        current_pgid = os.getpgrp()
-        print(f"Setting process group: {current_pgid}")
-        
-        def cleanup_process_group():
-            try:
-                print(f"Cleaning up process group: {current_pgid}")
-                import signal
-                os.killpg(current_pgid, signal.SIGTERM)
-            except Exception as e:
-                print(f"Failed to clean up process group: {e}")
-        
-        atexit.register(cleanup_process_group)
-        
-    except Exception as e:
-        print(f"Failed to set process group: {e}")
     print("=" * 60)
     print("robot control system started")
     print(f"Task: {args_cli.task}")
@@ -598,52 +580,14 @@ if __name__ == "__main__":
     finally:
         print("Performing final cleanup...")
         
-        # Get current process information
-        import os
-        import subprocess
-        import signal
-        import time
-        
-        current_pid = os.getpid()
-        print(f"Current main process PID: {current_pid}")
-        
-        try:
-            # Find all related Python processes
-            result = subprocess.run(['pgrep', '-f', 'sim_main.py'], 
-                                  capture_output=True, text=True)
-            if result.returncode == 0:
-                pids = result.stdout.strip().split('\n')
-                print(f"Found related processes: {pids}")
-                
-                for pid in pids:
-                    if pid and pid != str(current_pid):
-                        try:
-                            print(f"Terminating child process: {pid}")
-                            os.kill(int(pid), signal.SIGTERM)
-                        except ProcessLookupError:
-                            print(f"Process {pid} does not exist")
-                        except Exception as e:
-                            print(f"Failed to terminate process {pid}: {e}")
-                
-                # Wait for processes to exit
-                time.sleep(2)
-                
-                # Check if there are any remaining processes, force kill them
-                result2 = subprocess.run(['pgrep', '-f', 'sim_main.py'], 
-                                       capture_output=True, text=True)
-                if result2.returncode == 0:
-                    remaining_pids = result2.stdout.strip().split('\n')
-                    for pid in remaining_pids:
-                        if pid and pid != str(current_pid):
-                            try:
-                                print(f"Force killing process: {pid}")
-                                os.kill(int(pid), signal.SIGKILL)
-                            except Exception as e:
-                                print(f"Failed to force kill process {pid}: {e}")
-                                
-        except Exception as e:
-            print(f"Error during process cleanup: {e}")
-        
+        # Shutdown must only affect processes created by this simulator instance.
+        from tools.process_cleanup import cleanup_child_processes
+        logging_mp = sys.modules.get("logging_mp")
+        stop_listener = getattr(logging_mp, "stop_listener_process", None)
+        if callable(stop_listener):
+            stop_listener()
+        cleanup_child_processes()
+
         try:
             simulation_app.close()
         except Exception as e:
