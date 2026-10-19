@@ -208,9 +208,17 @@ class DDSManager:
 
 
     def stop_all_communication(self):
-        for name, obj in self.objects.items():
-            obj.stop_communication()    
-            self.publishing_running=False
-            self.subscribing_running=False
+        self.publishing_running = False
+        self.subscribing_running = False
+        for thread in (self.publish_thread, self.subscribe_thread):
+            if thread is not None and thread.is_alive() and thread is not threading.current_thread():
+                thread.join(timeout=2.0)
+                if thread.is_alive():
+                    raise RuntimeError("DDS thread did not stop; resources are still in use.")
+        for name, obj in list(self.objects.items()):
+            try:
+                obj.stop_communication()
+            except Exception as error:
+                print(f"[DDSManager] Failed to clean up {name}: {error}")
 # global singleton instance
 dds_manager = DDSManager()

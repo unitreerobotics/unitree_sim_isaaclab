@@ -64,6 +64,7 @@ class MultiImageWriter:
 
         # 为每个图像维护独立的共享内存
         self.shms = {}  # image_name -> SharedMemory
+        self._owned_shms = set()
         print(f"[MultiImageWriter] Initialized with separate SHM per image")
 
     def set_options(self, *, enable_jpeg: Optional[bool] = None, jpeg_quality: Optional[int] = None, skip_cvtcolor: Optional[bool] = None):
@@ -104,6 +105,7 @@ class MultiImageWriter:
                     except FileNotFoundError:
                         # 如果不存在，创建新的共享内存
                         self.shms[shm_name] = shared_memory.SharedMemory(create=True, size=SHM_SIZE_PER_IMAGE, name=shm_name)
+                        self._owned_shms.add(shm_name)
 
                 shm = self.shms[shm_name]
 
@@ -173,10 +175,16 @@ class MultiImageWriter:
         for shm_name, shm in self.shms.items():
             try:
                 shm.close()
+                if shm_name in self._owned_shms:
+                    try:
+                        shm.unlink()
+                    except FileNotFoundError:
+                        pass
                 print(f"[MultiImageWriter] Shared memory closed: {shm_name}")
             except Exception as e:
                 print(f"[MultiImageWriter] Error closing {shm_name}: {e}")
         self.shms.clear()
+        self._owned_shms.clear()
 
 
 class MultiImageReader:
@@ -426,4 +434,4 @@ class SharedMemoryReader:
         return images.get('head') if images else None
     
     def close(self):
-        self.multi_reader.close() 
+        self.multi_reader.close()

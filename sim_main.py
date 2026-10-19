@@ -123,16 +123,7 @@ def setup_signal_handlers(controller,dds_manager=None,image_server=None):
             controller.stop()
         except Exception as e:
             print(f"Failed to stop controller: {e}")
-        try:
-            if dds_manager is not None:
-                dds_manager.stop_all_communication()
-        except Exception as e:
-            print(f"Failed to stop DDS: {e}")
-        try:
-            if image_server is not None:
-                image_server.stop()
-        except Exception as e:
-            print(f"Failed to stop image server: {e}")
+        # Release DDS and image resources in the main-loop finalizer.
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
@@ -582,6 +573,8 @@ def main():
         # clean up resources
         print("\nclean up resources...")
         controller.cleanup()
+        if not args_cli.replay_data:
+            dds_manager.stop_all_communication()
         image_server.stop()
         env.close()
         print("cleanup completed")
@@ -597,6 +590,11 @@ if __name__ == "__main__":
         main()
     finally:
         print("Performing final cleanup...")
+        from dds.dds_master import dds_manager
+        dds_manager.stop_all_communication()
+        camera_module = sys.modules.get("tasks.common_observations.camera_state")
+        if camera_module is not None:
+            camera_module.close_camera_writer()
         
         # Get current process information
         import os

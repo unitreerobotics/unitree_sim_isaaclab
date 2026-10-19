@@ -64,6 +64,23 @@ def _ensure_async_started():
         _async_started = True
 
 
+def close_camera_writer():
+    """先停止图像写入线程，再释放本进程创建的图像共享内存。"""
+    global _async_started
+    if _async_started and _async_thread is not None and _async_thread.is_alive():
+        try:
+            _async_queue.put(None, timeout=1.0)
+        except queue.Full:
+            print("[camera_state] 图像队列未能停止，保留缓冲直到进程退出")
+            return
+        _async_thread.join(timeout=3.0)
+        if _async_thread.is_alive():
+            print("[camera_state] 图像写入线程未退出，保留缓冲直到进程退出")
+            return
+    _async_started = False
+    multi_image_writer.close()
+
+
 def get_camera_image(
     env: ManagerBasedRLEnv,
 ) -> dict:

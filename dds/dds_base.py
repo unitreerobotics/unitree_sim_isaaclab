@@ -50,3 +50,18 @@ class DDSObject(ABC):
     def stop_communication(self):
         self.publishing = False
         self.subscribing = False
+        errors = []
+        for name in ("subscriber", "publisher", "input_shm", "output_shm"):
+            resource = getattr(self, name, None)
+            if resource is None:
+                continue
+            method = "cleanup" if name.endswith("shm") else "Close"
+            close = getattr(resource, method, None)
+            try:
+                if callable(close):
+                    close()
+                setattr(self, name, None)
+            except Exception as error:
+                errors.append(error)
+        if errors:
+            raise RuntimeError("Failed to close one or more DDS resources") from errors[0]

@@ -101,6 +101,7 @@ class SharedMemoryManager:
                     self.shm.unlink()
                 except:
                     pass
+            self.shm = None
     
     def __del__(self):
         """Destructor"""
