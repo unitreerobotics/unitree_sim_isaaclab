@@ -317,7 +317,8 @@ G129_CFG_WITH_DEX1_BASE_FIX = ArticulationCfg(
             velocity_limit=None,  # set the velocity limit to 0
             stiffness=800.0,    # increase the stiffness (kp)
             damping=3.0,        # increase the damping (kd)
-            friction=200.0,
+            # no joint friction: since Isaac Lab 3.0 ``friction`` is a static friction effort [N] (not a
+            # coefficient); 200 N cancelled the whole drive effort and made the gripper crawl
             armature=None,
         ),
 
@@ -691,7 +692,8 @@ G129_CFG_WITH_DEX1_WHOLEBODY = ArticulationCfg(
             velocity_limit=None,  # set the velocity limit to 0
             stiffness=800.0,    # increase the stiffness (kp)
             damping=3.0,        # increase the damping (kd)
-            friction=200.0,
+            # no joint friction: since Isaac Lab 3.0 ``friction`` is a static friction effort [N] (not a
+            # coefficient); 200 N cancelled the whole drive effort and made the gripper crawl
             armature=None,
         ),
     },
@@ -1106,6 +1108,8 @@ G129_CFG_WITH_INSPIRE_WHOLEBODY = ArticulationCfg(
 
 
 
+# fixed base: the pelvis must be at its standing height (~1.03 m, soles 1.028 m below the pelvis), otherwise the
+# feet start inside the floor and the contacts crush the legs (see tasks/common_scene/h12_table_height.py)
 H12_CFG_WITH_INSPIRE_HAND = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=f"{project_root}/assets/robots/h1_2-26dof-inspire-base-fix-usd/h1_2_26dof_with_inspire_rev_1_0.usd",

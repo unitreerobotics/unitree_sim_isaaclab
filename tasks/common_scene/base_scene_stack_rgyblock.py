@@ -23,7 +23,7 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
         prim_path="/World/envs/env_.*/Room",
         init_state=AssetBaseCfg.InitialStateCfg(
             pos=[0.0, 0.0, 0],  # room center point
-            rot=[1.0, 0.0, 0.0, 0.0]
+            rot=[0.0, 0.0, 0.0, 1.0]
         ),
         spawn=UsdFileCfg(
             usd_path=f"{project_root}/assets/objects/small_warehouse_digital_twin/small_warehouse_digital_twin.usd",  # use simple room model
@@ -35,7 +35,7 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
     packing_table = AssetBaseCfg(
         prim_path="/World/envs/env_.*/PackingTable",    # table in the scene
         init_state=AssetBaseCfg.InitialStateCfg(pos=[-4.3,-4.2,-0.2],   # initial position [x, y, z]
-                                                rot=[1.0, 0.0, 0.0, 0.0]), # initial rotation [x, y, z, w]
+                                                rot=[0.0, 0.0, 0.0, 1.0]), # initial rotation [x, y, z, w]
         spawn=UsdFileCfg(
             usd_path=f"{project_root}/assets/objects/table_with_yellowbox.usd",    # table model file
             # rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),    # set to kinematic object
@@ -46,7 +46,7 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
         prim_path="/World/envs/env_.*/Red_block",
         init_state=RigidObjectCfg.InitialStateCfg(
             pos= [-4.1, -4.08, 0.84],
-            rot=[1, 0, 0, 0]
+            rot=[0, 0, 0, 1]
         ),
         spawn=sim_utils.CuboidCfg(
             size=(0.05, 0.05, 0.05),
@@ -77,7 +77,7 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
         prim_path="/World/envs/env_.*/Yellow_block",
         init_state=RigidObjectCfg.InitialStateCfg(
             pos= [-4.25, -4.05, 0.84],
-            rot=[1, 0, 0, 0]
+            rot=[0, 0, 0, 1]
         ),
         spawn=sim_utils.CuboidCfg(
             size=(0.05, 0.05, 0.05),
@@ -107,7 +107,7 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
         prim_path="/World/envs/env_.*/Green_block",
         init_state=RigidObjectCfg.InitialStateCfg(
             pos=  [-4.18, -4.12, 0.84] ,
-            rot=[1, 0, 0, 0]
+            rot=[0, 0, 0, 1]
         ),
         spawn=sim_utils.CuboidCfg(
             size=(0.05, 0.05, 0.05),
@@ -155,6 +155,6 @@ class TableRedGreenYellowBlockSceneCfg(InteractiveSceneCfg): # inherit from the 
 
     world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
                                                     pos_offset=(-4.1, -4.9, 1.8),
-                                                    rot_offset=( -0.3173,0.94833, 0.0, 0.0))
+                                                    rot_offset=(0.94833, 0.0, 0.0, -0.3173))
 
 

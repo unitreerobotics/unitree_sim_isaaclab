@@ -1,6 +1,6 @@
 
 # Copyright (c) 2025, Unitree Robotics Co., Ltd. All Rights Reserved.
-# License: Apache License, Version 2.0  
+# License: Apache License, Version 2.0
 #!/usr/bin/env python3
 # main.py
 import os
@@ -17,20 +17,20 @@ import torch
 import gymnasium as gym
 from pathlib import Path
 
-# Isaac Lab AppLauncher
-from isaaclab.app import AppLauncher
+# Isaac Lab 3.0 simulation launcher
+from isaaclab.app import add_launcher_args, launch_simulation
 
 from teleimager.image_server import run_isaacsim_server
 from dds.dds_create import create_dds_objects,create_dds_objects_replay
 # add command line arguments
 parser = argparse.ArgumentParser(description="Unitree Simulation")
 parser.add_argument("--task", type=str, default="Isaac-PickPlace-G129-Head-Waist-Fix", help="task name")
-parser.add_argument("--action_source", type=str, default="dds", 
-                   choices=["dds", "file", "trajectory", "policy", "replay","dds_wholebody"], 
+parser.add_argument("--action_source", type=str, default="dds",
+                   choices=["dds", "file", "trajectory", "policy", "replay","dds_wholebody"],
                    help="Action source")
 
 
-parser.add_argument("--robot_type", type=str, default="g129", help="robot type")
+parser.add_argument("--robot_type", type=str, default="g129", choices=["g129", "h1_2", "g1d", "r1d"], help="robot type (selects the body DDS / action mapping): g129 | h1_2 | g1d | r1d")
 parser.add_argument("--enable_dex1_dds", action="store_true", help="enable gripper DDS")
 parser.add_argument("--enable_dex3_dds", action="store_true", help="enable dexterous hand DDS")
 parser.add_argument("--enable_inspire_dds", action="store_true", help="enable inspire hand DDS")
@@ -55,7 +55,20 @@ parser.add_argument("--reward_interval", type=int, default=10, help="step interv
 parser.add_argument("--enable_wholebody_dds", action="store_true", default=False, help="enable wh dds")
 
 parser.add_argument("--physics_dt", type=float, default=None, help="physics time step, e.g., 0.005")
-parser.add_argument("--render_interval", type=int, default=None, help="render interval steps (>=1)")
+parser.add_argument("--render_interval", type=int, default=None, help="render interval in physics steps (>=1); overrides --render_fps")
+parser.add_argument("--render_fps", type=float, default=30.0,
+                    help="rendering rate [Hz] of the cameras and the viewport (each render is a full RTX frame of all cameras); "
+                         "the control loop keeps running at --step_hz. <=0: render every control step (old behaviour)")
+parser.add_argument("--image_server_in_process", action="store_true", default=False,
+                    help="run the image server in the simulator process (old behaviour). Default: own process, so its "
+                         "image encoding does not compete with the simulation for the Python GIL")
+parser.add_argument("--view_camera", type=str, default="auto", choices=["auto", "world", "follow", "none"],
+                    help="viewport camera at start-up (GUI): world = fixed overview camera (/World/PerspectiveCamera), "
+                         "follow = chase camera behind the robot (/World/FollowCamera), auto = follow for mobile robots "
+                         "(G1-D, R1-D, Wholebody tasks) else world. Both can also be selected in the viewport camera menu")
+parser.add_argument("--render_sync", action="store_true", default=False,
+                    help="wait for the GPU at every render (Isaac Lab default for synthetic data). Off: camera images may be "
+                         "one frame (<= 1/render_fps) old, but rendering is much faster")
 parser.add_argument("--camera_write_interval", type=int, default=None, help="camera write interval steps (>=1)")
 
 
@@ -71,13 +84,16 @@ parser.add_argument("--camera_jpeg", action="store_true", default=True, help="en
 parser.add_argument("--camera_jpeg_quality", type=int, default=85, help="JPEG quality (1-100)")
 
 parser.add_argument("--physx_substeps", type=int, default=None, help="physx substeps per step")
-parser.add_argument("--camera_include", type=str, default="front_camera,left_wrist_camera,right_wrist_camera", help="comma-separated camera names to enable")
+parser.add_argument("--camera_include", type=str, default="front_camera,front_right_camera,left_wrist_camera,right_wrist_camera", help="comma-separated camera names to enable")
 parser.add_argument("--camera_exclude", type=str, default="world_camera", help="comma-separated camera names to disable")
 
 parser.add_argument("--env_reward_interval", type=int, default=5, help="environment reward compute interval (steps)")
 parser.add_argument("--seed", type=int, default=42, help="environment seed")
-# add AppLauncher parameters
-AppLauncher.add_app_launcher_args(parser)
+parser.add_argument("--camera_calib", type=str, default=None,
+                    help="camera calibration file (uniclib_calibration json) used to create the cameras; "
+                         "default: $UNITREE_CAMERA_CALIB or robots/uniclib_calibration.json")
+# add Isaac Lab launcher parameters
+add_launcher_args(parser)
 args_cli = parser.parse_args()
 if args_cli.no_render:
     os.environ["LIVESTREAM"] = str(args_cli.livestream_type)
@@ -91,19 +107,144 @@ if args_cli.enable_dex3_dds and args_cli.enable_dex1_dds and args_cli.enable_ins
     sys.exit(1)
 
 
-import pinocchio                 
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
+# The camera presets read the calibration while `tasks` is imported, so select the file first.
+if args_cli.camera_calib:
+    _calib = os.path.abspath(os.path.expanduser(args_cli.camera_calib))
+    if not os.path.isfile(_calib):
+        print(f"Error: camera calibration file not found: {_calib}")
+        sys.exit(1)
+    os.environ["UNITREE_CAMERA_CALIB"] = _calib
+
+import tasks
+from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
+
+
+def _create_env_cfg():
+    """Create the task configuration and apply CLI overrides before launch."""
+    env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=1)
+    env_cfg.env_name = args_cli.task
+    env_cfg.seed = args_cli.seed
+
+    if args_cli.physics_dt is not None:
+        env_cfg.sim.dt = float(args_cli.physics_dt)
+    if args_cli.render_interval is not None:
+        env_cfg.sim.render_interval = max(1, int(args_cli.render_interval))
+    if args_cli.no_render:
+        env_cfg.sim.render_interval = 1_000_000
+    if args_cli.gravity_z is not None:
+        env_cfg.sim.gravity = (0.0, 0.0, float(args_cli.gravity_z))
+    if args_cli.solver_iterations is not None:
+        env_cfg.sim.physics.min_position_iteration_count = max(1, int(args_cli.solver_iterations))
+
+    # PhysX 6 no longer exposes a scene-level substeps field. Preserve the
+    # control period by reducing the physics dt and increasing decimation.
+    if args_cli.physx_substeps is not None:
+        substeps = max(1, int(args_cli.physx_substeps))
+        env_cfg.sim.dt /= substeps
+        env_cfg.decimation *= substeps
+        env_cfg.sim.render_interval *= substeps
+
+    _configure_cameras(env_cfg)
+    return env_cfg
+
+
+def _view_camera_cfg(cam_cfg):
+    """Plain USD camera at the pose of a camera sensor config, for the viewport only.
+
+    A camera *sensor* adds a render product that is rendered every frame (~10 ms per step for one 640x480 camera)
+    even if its image is never read. A plain camera prim is only rendered while the viewport looks through it
+    (e.g. the overview camera ``world_camera`` = /World/PerspectiveCamera).
+    """
+    import torch
+    from isaaclab.assets import AssetBaseCfg
+    from isaaclab.utils.math import convert_camera_frame_orientation_convention
+
+    rot = tuple(cam_cfg.offset.rot)
+    if cam_cfg.offset.convention != "opengl":  # USD cameras use the OpenGL convention
+        rot = tuple(convert_camera_frame_orientation_convention(
+            torch.tensor([rot], dtype=torch.float32), origin=cam_cfg.offset.convention, target="opengl")[0].tolist())
+    return AssetBaseCfg(
+        prim_path=cam_cfg.prim_path,
+        spawn=cam_cfg.spawn,
+        init_state=AssetBaseCfg.InitialStateCfg(pos=tuple(cam_cfg.offset.pos), rot=rot),
+    )
+
+
+def _set_viewport_camera(prim_path: str = "/World/PerspectiveCamera") -> None:
+    """Look through the overview camera in the GUI viewport (if both exist)."""
+    try:
+        import omni.usd
+        from omni.kit.viewport.utility import get_active_viewport
+
+        viewport = get_active_viewport()
+        if viewport is not None and omni.usd.get_context().get_stage().GetPrimAtPath(prim_path).IsValid():
+            viewport.camera_path = prim_path
+            print(f"[camera] viewport camera: {prim_path}")
+    except Exception as e:
+        print(f"[camera] could not set the viewport camera: {e}")
+
+
+def _configure_cameras(env_cfg):
+    """Camera / render rate settings (rendering is by far the most expensive part of a step).
+
+    * Cameras that are not used as sensors (not in --camera_include, or in --camera_exclude, e.g. the overview
+      camera world_camera) become plain USD cameras for the viewport: every camera *sensor* is rendered at every
+      RTX frame, whether its image is read or not.
+    * Cameras render at --render_fps (Isaac Lab 3: a camera whose update_period has elapsed triggers a full
+      RTX frame); the viewport (render_interval) follows the same rate. The control loop is not affected.
+    """
+    from isaaclab.sensors import CameraCfg
+
+    include = {n.strip() for n in (args_cli.camera_include or "").split(",") if n.strip()}
+    exclude = {n.strip() for n in (args_cli.camera_exclude or "").split(",") if n.strip()}
+    view_only = []
+    for name, cam in list(vars(env_cfg.scene).items()):
+        if isinstance(cam, CameraCfg) and (name in exclude or (include and name not in include)):
+            setattr(env_cfg.scene, name, _view_camera_cfg(cam))
+            view_only.append(name)
+    if view_only:
+        print(f"[camera] viewport-only cameras (no sensor, not in --camera_include / in --camera_exclude): {', '.join(view_only)}")
+
+    if args_cli.no_render or args_cli.render_interval is not None or args_cli.render_fps <= 0:
+        return
+    period = 1.0 / float(args_cli.render_fps)
+    for cam in vars(env_cfg.scene).values():
+        if isinstance(cam, CameraCfg):
+            cam.update_period = max(cam.update_period, period)
+    steps = max(1, round(period / env_cfg.sim.dt))
+    env_cfg.sim.render_interval = max(env_cfg.sim.render_interval, steps)
+    print(f"[camera] render rate {1.0 / (env_cfg.sim.render_interval * env_cfg.sim.dt):.1f} Hz "
+          f"(render_interval {env_cfg.sim.render_interval} physics steps, camera update period {period * 1000:.0f} ms)")
+
+
+env_cfg = _create_env_cfg()
+
+# Isaac Lab 3.0 opens a viewport only when the Kit visualizer is selected.
+if args_cli.visualizer is None and not args_cli.no_render and args_cli.livestream <= 0:
+    args_cli.visualizer = ["kit"]
+
+_runtime_stack = contextlib.ExitStack()
+_runtime_stack.enter_context(launch_simulation(env_cfg, args_cli))
+
+import omni.kit.app
+import pinocchio
+
+if not args_cli.render_sync:
+    # Isaac Lab waits for the GPU at every render so that annotator data belongs to exactly this frame. For
+    # teleoperation an image that is at most one render old is fine, and not waiting cuts the render time ~40 %.
+    import carb
+
+    carb.settings.get_settings().set("/app/renderer/waitIdle", False)
+    carb.settings.get_settings().set("/app/hydraEngine/waitIdle", False)
+
+simulation_app = omni.kit.app.get_app()
 
 from layeredcontrol.robot_control_system import (
-    RobotController, 
+    RobotController,
     ControlConfig,
 )
 
 from dds.reset_pose_dds import *
-import tasks
-from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
-
 from tools.augmentation_utils import (
     update_light,
     batch_augment_cameras_by_name,
@@ -138,7 +279,7 @@ def setup_signal_handlers(controller,dds_manager=None,image_server=None):
 
 
 
-def main():
+def main(env_cfg):
     """main function"""
     # import cProfile
     # import pstats
@@ -151,7 +292,7 @@ def main():
         os.setpgrp()
         current_pgid = os.getpgrp()
         print(f"Setting process group: {current_pgid}")
-        
+
         def cleanup_process_group():
             try:
                 print(f"Cleaning up process group: {current_pgid}")
@@ -159,9 +300,9 @@ def main():
                 os.killpg(current_pgid, signal.SIGTERM)
             except Exception as e:
                 print(f"Failed to clean up process group: {e}")
-        
+
         atexit.register(cleanup_process_group)
-        
+
     except Exception as e:
         print(f"Failed to set process group: {e}")
     print("=" * 60)
@@ -170,18 +311,9 @@ def main():
     print(f"Action source: {args_cli.action_source}")
     print("=" * 60)
 
-    # parse environment configuration
-    try:
-        env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=1)
-        env_cfg.env_name = args_cli.task
-    except Exception as e:
-        print(f"Failed to parse environment configuration: {e}")
-        return
-    
     # create environment
     print("\ncreate environment...")
     try:
-        env_cfg.seed = args_cli.seed
         env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
         env.seed(args_cli.seed)
         try:
@@ -194,6 +326,22 @@ def main():
         except Exception as e:
             print(f"[sim] failed to list sensors: {e}")
         print(f"\ncreate environment success ...")
+        follow_camera = None
+        if not args_cli.no_render:
+            try:
+                from tools.follow_camera import FollowCamera
+
+                follow_camera = FollowCamera(env)
+            except Exception as e:
+                print(f"[camera] follow camera not available: {e}")
+            view = args_cli.view_camera
+            if view == "auto":
+                mobile = args_cli.robot_type in ("g1d", "r1d") or "Wholebody" in args_cli.task
+                view = "follow" if (mobile and follow_camera is not None) else "world"
+            if view == "follow" and follow_camera is not None:
+                _set_viewport_camera(follow_camera.path)
+            elif view == "world":
+                _set_viewport_camera()
         try:
             env._reward_interval = max(1, int(args_cli.env_reward_interval))
             env._reward_counter = 0
@@ -201,37 +349,13 @@ def main():
             print(f"[env] reward compute interval set to {env._reward_interval} steps")
         except Exception as e:
             print(f"[env] failed to set reward interval: {e}")
-        if args_cli.physics_dt is not None:
-            try:
-                env.sim.set_substep_time(args_cli.physics_dt)
-                print(f"[sim] physics dt set to {args_cli.physics_dt}")
-            except Exception:
-                try:
-                    env.sim.dt = args_cli.physics_dt
-                    print(f"[sim] physics dt assigned to env.sim.dt={args_cli.physics_dt}")
-                except Exception as e:
-                    print(f"[sim] failed to set physics dt: {e}")
         headless_mode = bool(getattr(args_cli, "headless", False))
-        render_interval = None
-        if args_cli.render_interval is not None:
-            try:
-                render_interval = max(1, int(args_cli.render_interval))
-            except Exception as e:
-                print(f"[sim] invalid render_interval value {args_cli.render_interval}: {e}")
-        try:
-            if args_cli.no_render:
-                env.sim.render_interval = 1_000_000
-                env.sim.render_mode = "offscreen"
-                print("[sim] rendering disabled via --no_render")
-            elif headless_mode:
-                env.sim.render_mode = "offscreen"
-                env.sim.render_interval = render_interval or 1
-                print(f"[sim] headless offscreen rendering every {env.sim.render_interval} steps")
-            elif render_interval is not None:
-                env.sim.render_interval = render_interval
-                print(f"[sim] render_interval set to {env.sim.render_interval}")
-        except Exception as e:
-            print(f"[sim] failed to configure rendering: {e}")
+        if args_cli.no_render:
+            print("[sim] rendering disabled via --no_render")
+        elif headless_mode:
+            print(f"[sim] headless offscreen rendering every {env_cfg.sim.render_interval} steps")
+        else:
+            print(f"[sim] render_interval set to {env_cfg.sim.render_interval}")
         if args_cli.camera_write_interval is not None:
             try:
                 import tasks.common_observations.camera_state as cam_state
@@ -240,25 +364,6 @@ def main():
             except Exception as e:
                 print(f"[camera] failed to set write interval: {e}")
 
-        try:
-            if args_cli.solver_iterations is not None:
-                env.sim.physx.solver_iteration_count = int(args_cli.solver_iterations)
-                print(f"[sim] solver_iteration_count={env.sim.physx.solver_iteration_count}")
-            if args_cli.physx_substeps is not None:
-                try:
-                    env.sim.physx.substeps = int(args_cli.physx_substeps)
-                except Exception:
-                    try:
-                        env.sim.set_substeps(int(args_cli.physx_substeps))
-                    except Exception:
-                        pass
-                print(f"[sim] physx_substeps set to {args_cli.physx_substeps}")
-            if args_cli.gravity_z is not None:
-                g = float(args_cli.gravity_z)
-                env.sim.physx.gravity = (0.0, 0.0, g)
-                print(f"[sim] gravity set to {env.sim.physx.gravity}")
-        except Exception as e:
-            print(f"[sim] failed to set physx params: {e}")
         if args_cli.skip_cvtcolor:
             os.environ["CAMERA_SKIP_CVTCOLOR"] = "1"
         try:
@@ -311,12 +416,12 @@ def main():
     except Exception as e:
         print(f"\nFailed to create environment: {e}")
         return
-    
+
     # get robot stiffness and damping parameters from runtime environment
     print("\n" + "="*60)
     print("🔍 Getting robot stiffness and damping parameters from runtime environment")
     print("="*60)
-    
+
     try:
         stiffness_data = get_robot_stiffness_from_env(env)
         if stiffness_data:
@@ -325,9 +430,9 @@ def main():
             print("⚠️ Failed to get robot parameters, will try again after environment reset")
     except Exception as e:
         print(f"⚠️ Error getting robot parameters: {e}")
-    
+
     print("="*60)
-    
+
     if not getattr(args_cli, "headless", False) and not args_cli.no_render:
         print("\n")
         print("***  Please left-click on the Sim window to activate rendering. ***")
@@ -353,14 +458,14 @@ def main():
             focal_length=3.0,
             horizontal_aperture=22.0,
             vertical_aperture=16.0,
-            exposure=0.8,                
+            exposure=0.8,
             focus_distance=1.2
         )
     env.sim.reset()
     env.reset()
-    
+
     # create simplified control configuration
-    try:    
+    try:
         control_config = ControlConfig(
             step_hz=args_cli.step_hz,
             replay_mode=args_cli.replay_data
@@ -368,13 +473,18 @@ def main():
     except Exception as e:
         print(f"Failed to create control configuration: {e}")
         return
-    
+
     # create controller
 
     if not args_cli.replay_data:
         print("========= create image server =========")
         try:
-            image_server = run_isaacsim_server()
+            if args_cli.image_server_in_process:
+                image_server = run_isaacsim_server()
+            else:
+                from tools.image_server_process import ImageServerProcess
+
+                image_server = ImageServerProcess().start()
         except Exception as e:
             print(f"Failed to create image server: {e}")
             return
@@ -402,7 +512,7 @@ def main():
             args_cli.action_source = "replay"
         print("========= get data json list success =========")
     # create action provider
-    
+
     print(f"\ncreate action provider: {args_cli.action_source}...")
     try:
         print(f"args_cli.task: {args_cli.task}")
@@ -417,13 +527,13 @@ def main():
     except Exception as e:
         print(f"Failed to create action provider: {e}")
         return
-    
+
     # set action provider
     print("========= create controller =========")
     controller = RobotController(env, control_config)
     controller.set_action_provider(action_provider)
     print("========= create controller success =========")
-    
+
     # configure performance analysis
     if args_cli.enable_profiling:
         controller.set_profiling(True, args_cli.profile_interval)
@@ -438,22 +548,22 @@ def main():
         setup_signal_handlers(controller,dds_manager,image_server)
     else:
         setup_signal_handlers(controller)
-        
+
     print("Note: The DDS in Sim transmits messages on channel 1. Please ensure that other DDS instances use the same channel for message exchange by setting: ChannelFactoryInitialize(1).")
     try:
         # start controller - start asynchronous components
         print("========= start controller =========")
         controller.start()
         print("========= start controller success =========")
-        
+
         # main loop - execute in main thread to support rendering
         last_stats_time = time.time()
         loop_start_time = time.time()
         loop_count = 0
         last_loop_time = time.time()
         recent_loop_times = []  # for calculating moving average frequency
-        
-        
+
+
         reward_interval = max(1, args_cli.reward_interval)
 
         # use torch.inference_mode() and exception suppression
@@ -488,7 +598,7 @@ def main():
                     except Exception as e:
                         print(f"奖励计算失败: {e}")
                         pass
-                    
+
                     if reset_pose_cmd is not None:
                         try:
                             reset_category = reset_pose_cmd.get("reset_category")
@@ -514,7 +624,7 @@ def main():
                             print(f"Failed to load data: {e}")
                             raise e
                         try:
-                            env.reset_to(sim_state, torch.tensor([0], device=env.device), is_relative=True)
+                            env.reset_to(sim_state, torch.tensor([0], device=str(env.device)), is_relative=True)
                             env.sim.reset()
                             time.sleep(1)
                             action_provider.start_replay()
@@ -527,20 +637,22 @@ def main():
                 loop_dt = current_time - last_loop_time
                 last_loop_time = current_time
                 recent_loop_times.append(loop_dt)
-                
+
                 # keep recent 100 loop times
                 if len(recent_loop_times) > 100:
                     recent_loop_times.pop(0)
-                
+
                 # execute control step (in main thread, support rendering)
                 controller.step()
+                if follow_camera is not None:
+                    follow_camera.update()
 
                 # print statistics and loop frequency periodically
                 if current_time - last_stats_time >= args_cli.stats_interval:
                     # calculate while loop execution frequency
                     elapsed_time = current_time - loop_start_time
                     loop_frequency = loop_count / elapsed_time if elapsed_time > 0 else 0
-                    
+
                     # calculate moving average frequency (based on recent loop times)
                     if recent_loop_times:
                         avg_loop_time = sum(recent_loop_times) / len(recent_loop_times)
@@ -552,7 +664,7 @@ def main():
                     else:
                         moving_avg_frequency = 0
                         min_freq = max_freq = 0
-                    
+
                     print(f"\n=== While loop execution frequency statistics ===")
                     print(f"loop execution count: {loop_count}")
                     print(f"running time: {elapsed_time:.2f} seconds")
@@ -563,10 +675,10 @@ def main():
                     if recent_loop_times:
                         print(f"recent loop time: {(avg_loop_time*1000):.2f} ms")
                     print(f"=============================")
-                    
+
                     # print_stats(controller)
                     last_stats_time = current_time
-       
+
                 # check environment state
                 if env.sim.is_stopped():
                     print("\nenvironment stopped")
@@ -574,10 +686,10 @@ def main():
                 # rate_limiter.sleep(env)
     except KeyboardInterrupt:
         print("\nuser interrupted program")
-    
+
     except Exception as e:
         print(f"\nprogram exception: {e}")
-    
+
     finally:
         # clean up resources
         print("\nclean up resources...")
@@ -588,93 +700,85 @@ def main():
     # profiler.disable()
     # s = io.StringIO()
     # ps = pstats.Stats(profiler, stream=s).strip_dirs().sort_stats("time")
-    # ps.print_stats(30)  
+    # ps.print_stats(30)
 
     # print(s.getvalue())
 
 if __name__ == "__main__":
     try:
-        main()
+        main(env_cfg)
     finally:
         print("Performing final cleanup...")
-        
+
         # Get current process information
         import os
         import subprocess
         import signal
         import time
-        
+
         current_pid = os.getpid()
         print(f"Current main process PID: {current_pid}")
-        
+
+        # Terminate this process's own child processes (image server, DDS helpers, ...). Only descendants of
+        # this process are touched: matching processes by name ("sim_main.py") also killed other simulators,
+        # editors and shells of the user.
         try:
-            # Find all related Python processes
-            result = subprocess.run(['pgrep', '-f', 'sim_main.py'], 
-                                  capture_output=True, text=True)
-            if result.returncode == 0:
-                pids = result.stdout.strip().split('\n')
-                print(f"Found related processes: {pids}")
-                
-                for pid in pids:
-                    if pid and pid != str(current_pid):
-                        try:
-                            print(f"Terminating child process: {pid}")
-                            os.kill(int(pid), signal.SIGTERM)
-                        except ProcessLookupError:
-                            print(f"Process {pid} does not exist")
-                        except Exception as e:
-                            print(f"Failed to terminate process {pid}: {e}")
-                
-                # Wait for processes to exit
-                time.sleep(2)
-                
-                # Check if there are any remaining processes, force kill them
-                result2 = subprocess.run(['pgrep', '-f', 'sim_main.py'], 
-                                       capture_output=True, text=True)
-                if result2.returncode == 0:
-                    remaining_pids = result2.stdout.strip().split('\n')
-                    for pid in remaining_pids:
-                        if pid and pid != str(current_pid):
-                            try:
-                                print(f"Force killing process: {pid}")
-                                os.kill(int(pid), signal.SIGKILL)
-                            except Exception as e:
-                                print(f"Failed to force kill process {pid}: {e}")
-                                
+            import psutil
+
+            children = psutil.Process(current_pid).children(recursive=True)
+            for child in children:
+                try:
+                    print(f"Terminating child process: {child.pid}")
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    pass
+            _, alive = psutil.wait_procs(children, timeout=2)
+            for child in alive:
+                try:
+                    print(f"Force killing process: {child.pid}")
+                    child.kill()
+                except psutil.NoSuchProcess:
+                    pass
         except Exception as e:
             print(f"Error during process cleanup: {e}")
-        
+
         try:
-            simulation_app.close()
+            _runtime_stack.close()
         except Exception as e:
             print(f"Failed to close simulation application: {e}")
-            
+
         print("Program exit completed")
-        
+
         # Force exit
         os._exit(0)
 
-# python sim_main.py --device cpu  --enable_cameras  --task  Isaac-PickPlace-Cylinder-G129-Dex1-Joint   --enable_dex1_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-Cylinder-G129-Dex3-Joint    --enable_dex3_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-Cylinder-G129-Inspire-Joint    --enable_inspire_dds --robot_type g129
+# python sim_main.py --device cpu  --task  Isaac-PickPlace-Cylinder-G129-Dex1-Joint   --enable_dex1_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-G129-Dex3-Joint    --enable_dex3_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-G129-Inspire-Joint    --enable_inspire_dds --robot_type g129
 
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-RedBlock-G129-Dex1-Joint     --enable_dex1_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-RedBlock-G129-Dex3-Joint    --enable_dex3_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task  Isaac-PickPlace-RedBlock-G129-Inspire-Joint    --enable_inspire_dds --robot_type g129
-
-
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Stack-RgyBlock-G129-Dex1-Joint     --enable_dex1_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Stack-RgyBlock-G129-Dex3-Joint     --enable_dex3_dds --robot_type g129
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Stack-RgyBlock-G129-Inspire-Joint     --enable_inspire_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-G129-Dex1-Joint     --enable_dex1_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-G129-Dex3-Joint    --enable_dex3_dds --robot_type g129
+# python sim_main.py --device cpu  --task  Isaac-PickPlace-RedBlock-G129-Inspire-Joint    --enable_inspire_dds --robot_type g129
 
 
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-G129-Dex1-Joint     --enable_dex1_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-G129-Dex3-Joint     --enable_dex3_dds --robot_type g129
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-G129-Inspire-Joint     --enable_inspire_dds --robot_type g129
 
 
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Move-Cylinder-G129-Dex1-Wholebody  --robot_type g129 --enable_dex1_dds 
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Move-Cylinder-G129-Dex3-Wholebody  --robot_type g129 --enable_dex3_dds 
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Move-Cylinder-G129-Inspire-Wholebody  --robot_type g129 --enable_inspire_dds 
 
 
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint  --enable_inspire_dds --robot_type h1_2
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-PickPlace-RedBlock-H12-27dof-Inspire-Joint  --enable_inspire_dds --robot_type h1_2
-# python sim_main.py --device cpu  --enable_cameras  --task Isaac-Stack-RgyBlock-H12-27dof-Inspire-Joint --enable_inspire_dds --robot_type h1_2
+# python sim_main.py --device cpu  --task Isaac-Move-Cylinder-G129-Dex1-Wholebody  --robot_type g129 --enable_dex1_dds
+# python sim_main.py --device cpu  --task Isaac-Move-Cylinder-G129-Dex3-Wholebody  --robot_type g129 --enable_dex3_dds
+# python sim_main.py --device cpu  --task Isaac-Move-Cylinder-G129-Inspire-Wholebody  --robot_type g129 --enable_inspire_dds
+
+
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint  --enable_inspire_dds --robot_type h1_2
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-H12-27dof-Inspire-Joint  --enable_inspire_dds --robot_type h1_2
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-H12-27dof-Inspire-Joint --enable_inspire_dds --robot_type h1_2
+
+# Unitree G1-D (wheeled base + lift, Dex1 grippers; robot from URDF assets/urdf/g1_d_description)
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-G1D-Dex1-Joint  --enable_dex1_dds --robot_type g1d
+
+# Unitree R1-D (wheeled base + lift, Dex1 grippers; robot from URDF assets/urdf/r1_d_description)
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R1D-Dex1-Joint  --enable_dex1_dds --robot_type r1d

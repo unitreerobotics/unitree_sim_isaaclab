@@ -162,7 +162,7 @@ class DDSActionProvider(ActionProvider):
             self._inspire_special_source_indices = [spec[0] for spec in self.special_joint_mapping.values()]
             self._inspire_special_scales = torch.tensor([spec[1] for spec in self.special_joint_mapping.values()], dtype=torch.float32)
         
-        device = self.env.device
+        device = str(self.env.device)
         self._arm_target_idx_t = torch.tensor(self._arm_target_indices, dtype=torch.long, device=device)
         self._arm_source_idx_t = torch.tensor(self._arm_source_indices, dtype=torch.long, device=device)
         if self.enable_gripper:
@@ -201,7 +201,7 @@ class DDSActionProvider(ActionProvider):
                 if cmd_data and 'motor_cmd' in cmd_data:
                     positions = cmd_data['motor_cmd']['positions']
                     if len(positions) >= 29:
-                        self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=self.env.device))
+                        self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=str(self.env.device)))
                         arm_vals = self._positions_buf.index_select(0, self._arm_source_idx_t)
                         full_action.index_copy_(0, self._arm_target_idx_t, arm_vals)
             elif self.enable_robot == "h1_2" and self.robot_dds:
@@ -209,7 +209,7 @@ class DDSActionProvider(ActionProvider):
                 if cmd_data and 'motor_cmd' in cmd_data:
                     positions = cmd_data['motor_cmd']['positions']
                     if len(positions) >= 29:
-                        self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=self.env.device))
+                        self._positions_buf[:29].copy_(torch.tensor(positions[:29], dtype=torch.float32, device=str(self.env.device)))
                         arm_vals = self._positions_buf.index_select(0, self._arm_source_idx_t)
                         full_action.index_copy_(0, self._arm_target_idx_t, arm_vals)
             # Get gripper command
@@ -222,7 +222,7 @@ class DDSActionProvider(ActionProvider):
                     right_gripper_positions = right_gripper_cmd.get('positions', [])
                     gripper_positions = right_gripper_positions + left_gripper_positions
                     if len(gripper_positions) >= 2:
-                        self._gripper_buf.copy_(torch.tensor(gripper_positions[:2], dtype=torch.float32, device=self.env.device))
+                        self._gripper_buf.copy_(torch.tensor(gripper_positions[:2], dtype=torch.float32, device=str(self.env.device)))
                         gp_vals = self._gripper_buf.index_select(0, self._gripper_source_idx_t)
                         full_action.index_copy_(0, self._gripper_target_idx_t, gp_vals)
              
@@ -235,8 +235,8 @@ class DDSActionProvider(ActionProvider):
                         left_positions = left_hand_cmd.get('positions', [])
                         right_positions = right_hand_cmd.get('positions', [])
                         if len(left_positions) >= len(self._left_hand_buf) and len(right_positions) >= len(self._right_hand_buf):
-                            self._left_hand_buf.copy_(torch.tensor(left_positions[:len(self._left_hand_buf)], dtype=torch.float32, device=self.env.device))
-                            self._right_hand_buf.copy_(torch.tensor(right_positions[:len(self._right_hand_buf)], dtype=torch.float32, device=self.env.device))
+                            self._left_hand_buf.copy_(torch.tensor(left_positions[:len(self._left_hand_buf)], dtype=torch.float32, device=str(self.env.device)))
+                            self._right_hand_buf.copy_(torch.tensor(right_positions[:len(self._right_hand_buf)], dtype=torch.float32, device=str(self.env.device)))
                             l_vals = self._left_hand_buf.index_select(0, self._left_hand_source_idx_t)
                             r_vals = self._right_hand_buf.index_select(0, self._right_hand_source_idx_t)
                             full_action.index_copy_(0, self._left_hand_target_idx_t, l_vals)
@@ -246,7 +246,7 @@ class DDSActionProvider(ActionProvider):
                 if inspire_cmds and 'positions' in inspire_cmds:
                         inspire_cmds_positions = inspire_cmds['positions']
                         if len(inspire_cmds_positions) >= 12:
-                            self._inspire_buf.copy_(torch.tensor(inspire_cmds_positions[:12], dtype=torch.float32, device=self.env.device))
+                            self._inspire_buf.copy_(torch.tensor(inspire_cmds_positions[:12], dtype=torch.float32, device=str(self.env.device)))
                             base_vals = self._inspire_buf.index_select(0, self._inspire_source_idx_t)
                             full_action.index_copy_(0, self._inspire_target_idx_t, base_vals)
                             special_vals = self._inspire_buf.index_select(0, self._inspire_special_source_idx_t) * self._inspire_special_scales_t

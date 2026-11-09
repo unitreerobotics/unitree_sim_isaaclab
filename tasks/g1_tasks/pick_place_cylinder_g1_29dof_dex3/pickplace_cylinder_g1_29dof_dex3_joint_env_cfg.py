@@ -9,7 +9,7 @@ from dataclasses import MISSING
 
 import isaaclab.envs.mdp as base_mdp
 from isaaclab.assets import ArticulationCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from tasks.common_config.env_configs import UnitreeManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -44,6 +44,7 @@ class ObjectTableSceneCfg(TableCylinderSceneCfg):
     robot: ArticulationCfg = G1RobotPresets.g1_29dof_dex3_base_fix()
     # 6. add camera configuration 
     front_camera = CameraPresets.g1_front_camera()
+    front_right_camera = CameraPresets.g1_front_right_camera()
     left_wrist_camera = CameraPresets.left_dex3_wrist_camera()
     right_wrist_camera = CameraPresets.right_dex3_wrist_camera()
 
@@ -116,9 +117,9 @@ class EventCfg:
 
 
 @configclass
-class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
+class PickPlaceG129DEX3JointEnvCfg(UnitreeManagerBasedRLEnvCfg):
     """uNITREE G1 robot pick place environment configuration class
-    inherits from ManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
+    inherits from UnitreeManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
     """
 
     # 1. scene settings
@@ -144,10 +145,10 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
-        self.sim.physx.bounce_threshold_velocity = 0.01
-        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
-        self.sim.physx.friction_correlation_distance = 0.00625
+        self.sim.physics.bounce_threshold_velocity = 0.01
+        self.sim.physics.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physics.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physics.friction_correlation_distance = 0.00625
 
 
 
@@ -159,7 +160,7 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_object_self", SimpleEvent(
             func=lambda env: base_mdp.reset_root_state_uniform(
                 env,
-                torch.arange(env.num_envs, device=env.device),
+                torch.arange(env.num_envs, device=str(env.device)),
                 pose_range={"x": [-0.05, 0.05], "y": [0.0, 0.05]},
                 velocity_range={},
                 asset_cfg=SceneEntityCfg("object"),
@@ -168,5 +169,5 @@ class PickPlaceG129DEX3JointEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
                 env,
-                torch.arange(env.num_envs, device=env.device))
+                torch.arange(env.num_envs, device=str(env.device)))
         ))

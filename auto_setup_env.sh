@@ -1,75 +1,77 @@
 #!/bin/bash
-set -e 
+# Automatic environment setup for unitree_sim_isaaclab
+#   Isaac Sim 6.2.0 + Isaac Lab 3.0.0 (Python 3.12, PyTorch 2.11 / CUDA 13.0)
+#
+# Usage:   bash auto_setup_env.sh <env_name> [cuda_tag]
+# Example: bash auto_setup_env.sh unitree_sim_env            # default cuda_tag: cu130
+#
+# Requirements: Ubuntu 22.04 or newer (GLIBC >= 2.35), NVIDIA driver >= 580.65.06, conda.
+# IsaacLab, cyclonedds and unitree_sdk2_python are cloned next to this repository.
+set -e
+
+# ---- versions -------------------------------------------------------------
+PYTHON_VER="3.12"
+TORCH_PKG="torch==2.11.0 torchvision==0.26.0"
+DEFAULT_CUDA="cu130"
+ISAAC_SIM_PKG="isaacsim[all,extscache]==6.2.0.0"
+ISAAC_LAB_TAG="v3.0.0"
+CYCLONEDDS_BRANCH="releases/0.10.x"
 
 # 0. Directory safety check
-if [ ! -d "teleimager" ] || [ ! -f "requirements.txt" ]; then
+if [ ! -d "teleimager" ] || [ ! -f "requirements.txt" ] || [ ! -f "sim_main.py" ]; then
     echo "Error: Please place and run this script from the root of the unitree_sim_isaaclab project!"
     exit 1
 fi
 
-# 1. Check Arguments
-if [ "$#" -lt 2 ]; then
-    echo "Usage: bash setup_env.sh <4.5|5.0|5.1> <env_name> [cuda_version (e.g., cu121, cu126)]"
-    echo "Example: bash setup_env.sh 5.1 my_unitree_env cu126"
+# 1. Check arguments
+if [ "$#" -lt 1 ]; then
+    echo "Usage: bash auto_setup_env.sh <env_name> [cuda_tag (default: $DEFAULT_CUDA)]"
+    echo "Example: bash auto_setup_env.sh unitree_sim_env"
+    echo "Installs Isaac Sim 6.2.0 + Isaac Lab 3.0.0 (Python $PYTHON_VER)."
     exit 1
 fi
+ENV_NAME=$1
+CUDA_VER=${2:-$DEFAULT_CUDA}
 
-sudo apt-get update && sudo apt-get install -y cmake build-essential openssl git-lfs unzip
-
-ISAAC_VERSION=$1
-ENV_NAME=$2
-CUDA_VER=$3
-
-# 2. Assign Version-Specific Variables
-if [ "$ISAAC_VERSION" == "4.5" ]; then
-    PYTHON_VER="3.10"
-    TORCH_PKG="torch==2.5.1 torchvision==0.20.1"
-    DEFAULT_CUDA="cu121"
-    ISAAC_SIM_PKG="isaacsim[all,extscache]==4.5.0"
-    # ISAAC_LAB_COMMIT="91ad4944f2b7fad29d52c04a5264a082bcaad71d"
-elif [ "$ISAAC_VERSION" == "5.0" ]; then
-    PYTHON_VER="3.11"
-    TORCH_PKG="torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0"
-    DEFAULT_CUDA="cu126"
-    ISAAC_SIM_PKG="isaacsim[all,extscache]==5.0.0"
-    # ISAAC_LAB_COMMIT="v2.2.0"
-elif [ "$ISAAC_VERSION" == "5.1" ]; then
-    PYTHON_VER="3.11"
-    TORCH_PKG="torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0"
-    DEFAULT_CUDA="cu126"
-    ISAAC_SIM_PKG="isaacsim[all,extscache]==5.1.0"
-    # ISAAC_LAB_COMMIT="80094be3245aa5c8376a7464d29cb4412ea518f5"
+# 2. System checks (warnings only)
+GLIBC_VER=$(ldd --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+$' || true)
+if [ -n "$GLIBC_VER" ] && [ "$(printf '%s\n' "2.35" "$GLIBC_VER" | sort -V | head -n1)" != "2.35" ]; then
+    echo "Warning: GLIBC $GLIBC_VER found, Isaac Sim 6.2 needs GLIBC >= 2.35 (Ubuntu 22.04 or newer)."
+fi
+if command -v nvidia-smi >/dev/null 2>&1; then
+    DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -n1)
+    if [ "$(printf '%s\n' "580.65.06" "$DRIVER_VER" | sort -V | head -n1)" != "580.65.06" ]; then
+        echo "Warning: NVIDIA driver $DRIVER_VER found, Isaac Sim 6.2 needs >= 580.65.06."
+    fi
 else
-    echo "Error: Unsupported version. Please use 4.5, 5.0, or 5.1."
+    echo "Warning: nvidia-smi not found - is the NVIDIA driver installed?"
+fi
+if ! command -v conda >/dev/null 2>&1; then
+    echo "Error: conda not found. Please install Miniconda / Anaconda first."
     exit 1
 fi
 
-if [ -z "$CUDA_VER" ]; then
-    CUDA_VER=$DEFAULT_CUDA
-fi
-PYTORCH_CMD="pip install $TORCH_PKG --index-url https://download.pytorch.org/whl/$CUDA_VER"
+sudo apt-get update && sudo apt-get install -y cmake build-essential openssl git git-lfs unzip
 
 UNITREE_DIR=$(pwd)
 
-
 # ==========================================
-# PHASE 1: PRE-CLONE ALL REPOSITORIES
+# PHASE 1: CLONE REPOSITORIES
 # ==========================================
 echo "=================================================="
-echo "=== Phase 1: Cloning all required repositories ==="
+echo "=== Phase 1: Cloning required repositories ==="
 echo "=================================================="
-
-
 cd ..
 
 if [ ! -d "IsaacLab" ]; then
-    echo "Cloning Isaac Lab..."
+    echo "Cloning Isaac Lab ($ISAAC_LAB_TAG)..."
     git clone https://github.com/isaac-sim/IsaacLab.git
 fi
+(cd IsaacLab && git fetch --tags && git checkout "$ISAAC_LAB_TAG")
 
 if [ ! -d "cyclonedds" ]; then
     echo "Cloning CycloneDDS..."
-    git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+    git clone https://github.com/eclipse-cyclonedds/cyclonedds -b "$CYCLONEDDS_BRANCH"
 fi
 
 if [ ! -d "unitree_sdk2_python" ]; then
@@ -77,28 +79,24 @@ if [ ! -d "unitree_sdk2_python" ]; then
     git clone https://github.com/unitreerobotics/unitree_sdk2_python
 fi
 
-
 cd "$UNITREE_DIR"
-echo "**************************************************"
-echo "Initializing submodules for unitree_sim_isaaclab..."
-echo "**************************************************"
-git submodule update --init --depth 1
-# git submodule update --remote --merge
-
 
 echo "**************************************************"
-echo "Generate certificate files..."
+echo "Generating certificate files for the image server (WebRTC / https)..."
 echo "Just keep pressing the Enter key."
-echo "**************************************************"   
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
+echo "**************************************************"
 mkdir -p ~/.config/xr_teleoperate/
-cp key.pem cert.pem ~/.config/xr_teleoperate/
-rm key.pem cert.pem
-
+if [ -f ~/.config/xr_teleoperate/cert.pem ] && [ -f ~/.config/xr_teleoperate/key.pem ]; then
+    echo "Certificates already exist in ~/.config/xr_teleoperate/, skipping."
+else
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
+    cp key.pem cert.pem ~/.config/xr_teleoperate/
+    rm key.pem cert.pem
+fi
 
 echo "**************************************************"
-echo "Downloading Isaac Lab assets..."
-echo "**************************************************"   
+echo "Downloading scene / robot assets..."
+echo "**************************************************"
 chmod +x fetch_assets.sh
 bash fetch_assets.sh
 
@@ -106,7 +104,7 @@ bash fetch_assets.sh
 # PHASE 2: BUILD C++ DEPENDENCIES
 # ==========================================
 echo "=================================================="
-echo "=== Phase 2: Pre-compiling CycloneDDS ==="
+echo "=== Phase 2: Building CycloneDDS ==="
 echo "=================================================="
 cd ../cyclonedds
 if [ ! -d "install" ]; then
@@ -116,71 +114,76 @@ if [ ! -d "install" ]; then
     cmake --build . --target install
     cd ..
 fi
-
 export CYCLONEDDS_HOME="$(pwd)/install"
 cd "$UNITREE_DIR"
 
-
 # ==========================================
-# PHASE 3: CONDA ENVIRONMENT & INSTALLATION
+# PHASE 3: CONDA ENVIRONMENT & PACKAGES
 # ==========================================
 echo "=================================================="
-echo "=== Phase 3: Setting up Conda and installing packages ==="
+echo "=== Phase 3: Conda environment and packages ==="
 echo "=================================================="
-echo "**************************************************"
-echo "Initializing Conda environment..."
-echo "**************************************************"
 CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 
-echo "Creating Conda environment: $ENV_NAME (Python $PYTHON_VER)..."
-conda create -y -n "$ENV_NAME" python="$PYTHON_VER"
+if conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
+    echo "Conda environment '$ENV_NAME' already exists, reusing it."
+else
+    echo "Creating conda environment: $ENV_NAME (Python $PYTHON_VER)..."
+    conda create -y -n "$ENV_NAME" python="$PYTHON_VER"
+fi
 conda activate "$ENV_NAME"
-
-echo "Installing PyTorch (CUDA: $CUDA_VER)..."
-eval "$PYTORCH_CMD"
-
-echo "Installing Isaac Sim $ISAAC_VERSION..."
+# recent libstdc++ (Isaac Sim needs GLIBCXX_3.4.30). Only conda package of the environment, installed before
+# any pip package: conda packages with Python dependencies (e.g. pinocchio -> numpy / scipy) would mix conda
+# and pip versions of the same modules. pinocchio comes from pip (package "pin", a dependency of Isaac Lab).
+conda install -y -c conda-forge libstdcxx-ng
 pip install --upgrade pip
+
+echo "Installing PyTorch ($TORCH_PKG, $CUDA_VER)..."
+pip install $TORCH_PKG --index-url "https://download.pytorch.org/whl/$CUDA_VER"
+
+echo "Installing Isaac Sim 6.2.0..."
 pip install "$ISAAC_SIM_PKG" --extra-index-url https://pypi.nvidia.com
+export OMNI_KIT_ACCEPT_EULA=YES
 
 echo "**************************************************"
-echo "Modifying teleimager configurations..."
-echo "**************************************************"
-sed -i 's/type:.*/type: isaacsim/' teleimager/cam_config_server.yaml
-sed -i 's/image_shape:.*/image_shape: [480, 640]/' teleimager/cam_config_server.yaml
-
-echo "**************************************************"
-echo "Installing Isaac Lab..."
+echo "Installing Isaac Lab $ISAAC_LAB_TAG..."
 echo "**************************************************"
 cd ../IsaacLab
-if [ "$ISAAC_VERSION" == "5.0" ]; then
-    git checkout v2.2.0
-fi
-# git checkout "$ISAAC_LAB_COMMIT"
 ./isaaclab.sh --install
 
 echo "**************************************************"
 echo "Installing unitree_sdk2_python..."
-echo "**************************************************"   
+echo "**************************************************"
 cd ../unitree_sdk2_python
 pip install -e .
+
 echo "**************************************************"
 echo "Installing remaining requirements and teleimager..."
 echo "**************************************************"
 cd "$UNITREE_DIR"
 pip install -r requirements.txt
+# image server: camera frames come from the simulator (shared memory)
+sed -i 's/type:.*/type: isaacsim/' teleimager/cam_config_server.yaml
 cd teleimager
 pip install -e .
 cd ..
 
-if [ "$ISAAC_VERSION" == "5.0" ] || [ "$ISAAC_VERSION" == "5.1" ]; then
-    echo "Applying libstdc++ patch..."
-    conda install -y -c conda-forge libstdcxx-ng
-fi
+echo "**************************************************"
+echo "Checking the environment..."
+echo "**************************************************"
+python - <<'PYEOF'
+import numpy, scipy.sparse, pinocchio, torch
+assert int(numpy.__version__.split(".")[0]) >= 2, f"numpy {numpy.__version__} found, Isaac Lab 3.0 needs numpy >= 2"
+print(f"numpy {numpy.__version__}, scipy {scipy.__version__}, pinocchio {pinocchio.__version__}, torch {torch.__version__}")
+PYEOF
 
+# accept the Omniverse EULA automatically in this environment
+conda env config vars set OMNI_KIT_ACCEPT_EULA=YES >/dev/null
 
 echo "=================================================="
-echo "Environment $ENV_NAME setup complete for Isaac Sim $ISAAC_VERSION!"
+echo "Environment $ENV_NAME is ready (Isaac Sim 6.2.0 / Isaac Lab 3.0.0)."
 echo "To begin using it, run: conda activate $ENV_NAME"
+echo "Quick test:"
+echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint --enable_dex1_dds --robot_type g129"
 echo "=================================================="

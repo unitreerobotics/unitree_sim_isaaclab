@@ -7,7 +7,7 @@ from dataclasses import MISSING
 
 
 import isaaclab.envs.mdp as base_mdp
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from tasks.common_config.env_configs import UnitreeManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -40,13 +40,14 @@ class ObjectTableSceneCfg(TableRedGreenYellowBlockSceneCfg):
     # Humanoid robot w/ arms higher
     # 5. humanoid robot configuration 
     robot: ArticulationCfg = G1RobotPresets.g1_29dof_inspire_base_fix(init_pos=(-4.2, -3.7, 0.76),
-        init_rot=(0.7071, 0, 0, -0.7071))
+        init_rot=(0, 0, -0.7071, 0.7071))
 
 
     # 6. add camera configuration 
     front_camera = CameraPresets.g1_front_camera()
-    left_wrist_camera = CameraPresets.left_inspire_wrist_camera()
-    right_wrist_camera = CameraPresets.right_inspire_wrist_camera()
+    front_right_camera = CameraPresets.g1_front_right_camera()
+    left_wrist_camera = CameraPresets.left_inspire_wrist_camera(calibrated=True)
+    right_wrist_camera = CameraPresets.right_inspire_wrist_camera(calibrated=True)
 
 ##
 # MDP settings
@@ -144,9 +145,9 @@ class EventCfg:
     )   
 
 @configclass
-class StackRgyBlockG129InspireBaseFixEnvCfg(ManagerBasedRLEnvCfg):
+class StackRgyBlockG129InspireBaseFixEnvCfg(UnitreeManagerBasedRLEnvCfg):
     """Unitree G1 robot stack red, yellow, green block environment configuration class
-    inherits from ManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
+    inherits from UnitreeManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
     """
 
     # 1. scene settings
@@ -171,17 +172,13 @@ class StackRgyBlockG129InspireBaseFixEnvCfg(ManagerBasedRLEnvCfg):
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
-        self.sim.physx.bounce_threshold_velocity = 0.01
-        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 32 * 1024
-        self.sim.physx.friction_correlation_distance = 0.003
-        self.sim.physx.enable_ccd = True
-        self.sim.physx.gpu_constraint_solver_heavy_spring_enabled = True
-        self.sim.physx.num_substeps = 4
-        self.sim.physx.contact_offset = 0.01
-        self.sim.physx.rest_offset = 0.001
-        self.sim.physx.num_position_iterations = 16
-        self.sim.physx.num_velocity_iterations = 4
+        self.sim.physics.bounce_threshold_velocity = 0.01
+        self.sim.physics.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physics.gpu_total_aggregate_pairs_capacity = 32 * 1024
+        self.sim.physics.friction_correlation_distance = 0.003
+        self.sim.physics.enable_ccd = True
+        self.sim.physics.min_position_iteration_count = 16
+        self.sim.physics.min_velocity_iteration_count = 4
         # create event manager
         self.event_manager = SimpleEventManager() 
 
@@ -227,5 +224,5 @@ class StackRgyBlockG129InspireBaseFixEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
                 env,
-                torch.arange(env.num_envs, device=env.device))
+                torch.arange(env.num_envs, device=str(env.device)))
         ))

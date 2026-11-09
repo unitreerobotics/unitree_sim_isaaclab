@@ -156,9 +156,9 @@ def get_robot_boy_joint_states(
         - the last 29 elements are joint torques
     """
     # get all joint states
-    joint_pos = env.scene["robot"].data.joint_pos
-    joint_vel = env.scene["robot"].data.joint_vel
-    joint_torque = env.scene["robot"].data.applied_torque  # use applied_torque to get joint torques
+    joint_pos = env.scene["robot"].data.joint_pos.torch
+    joint_vel = env.scene["robot"].data.joint_vel.torch
+    joint_torque = env.scene["robot"].actuators.applied_effort.torch  # use applied_torque to get joint torques
     device = joint_pos.device
     batch = joint_pos.shape[0]
 
@@ -326,8 +326,8 @@ def get_robot_imu_data(env, use_torso_imu: bool = True, quat_w_first: bool = Non
         try:
             body_names = data.body_names
             imu_idx = body_names.index("imu_in_torso")
-            body_pose = data.body_link_pose_w  # [B, N, 7]
-            body_vel = data.body_link_vel_w    # [B, N, 6]
+            body_pose = data.body_link_pose_w.torch  # [B, N, 7]
+            body_vel = data.body_link_vel_w.torch    # [B, N, 6]
             pos = body_pose[:, imu_idx, :3]
             quat = body_pose[:, imu_idx, 3:7]
             lin_vel = body_vel[:, imu_idx, :3]
@@ -336,7 +336,7 @@ def get_robot_imu_data(env, use_torso_imu: bool = True, quat_w_first: bool = Non
             use_torso_imu = False
 
     if not use_torso_imu:
-        root_state = data.root_state_w  # [B, 13]
+        root_state = data.root_state_w.torch  # [B, 13]
         pos = root_state[:, :3]
         quat = root_state[:, 3:7]
         lin_vel = root_state[:, 7:10]
@@ -367,7 +367,7 @@ def get_robot_imu_data(env, use_torso_imu: bool = True, quat_w_first: bool = Non
     a_world_corrected = a_world - g_world  # [B,3]
 
     # prepare quaternion in (w,x,y,z)
-    quat_wxyz = ensure_quat_w_first(quat, assume_w_first=True)
+    quat_wxyz = ensure_quat_w_first(quat, assume_w_first=False)
 
     # build rotation matrices R_body->world ; to convert world->body use R^T
     R_body_to_world = quat_to_rot_matrix(quat_wxyz)  # [B,3,3]

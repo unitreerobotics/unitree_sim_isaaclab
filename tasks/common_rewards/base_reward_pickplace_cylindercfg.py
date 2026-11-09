@@ -73,9 +73,9 @@ def compute_reward(
     object: RigidObject = env.scene[object_cfg.name]
     
     # 2. get object position
-    wheel_x = object.data.root_pos_w[:, 0]         # x position
-    wheel_y = object.data.root_pos_w[:, 1]        # y position
-    wheel_height = object.data.root_pos_w[:, 2]   # z position (height)
+    wheel_x = object.data.root_pos_w.torch[:, 0]         # x position
+    wheel_y = object.data.root_pos_w.torch[:, 1]        # y position
+    wheel_height = object.data.root_pos_w.torch[:, 2]   # z position (height)
 
     # element-wise operations
     done_x = (wheel_x < max_x) & (wheel_x > min_x)
@@ -90,7 +90,7 @@ def compute_reward(
     done_post = done_post_x & done_post_y & done_post_height
 
     # Create reward tensor for all environments
-    reward = torch.zeros(env.num_envs, device=env.device, dtype=torch.float)
+    reward = torch.zeros(env.num_envs, device=str(env.device), dtype=torch.float)
     
     # Set rewards based on conditions
     reward[~done] = -1.0  # Not in valid area

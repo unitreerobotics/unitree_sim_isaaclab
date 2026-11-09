@@ -1,0 +1,307 @@
+{
+  "format": "uniclib_calibration",
+  "format_version": 1,
+  "generated_at": "2026-11-06T12:21:30",
+  "device": {
+    "hostname": "ubuntu"
+  },
+  "intrinsics": {
+    "left_wrist": {
+      "camera_model": "Pinhole",
+      "image_size": [
+        480,
+        640
+      ],
+      "intrinsic": {
+        "fx": 426.8286444020723,
+        "fy": 427.1156049600648,
+        "cx": 310.4166162889969,
+        "cy": 233.82760424829794,
+        "k1": -0.39718897352739013,
+        "k2": 0.20925348009816414,
+        "p1": 0.0033282832894254606,
+        "p2": -0.000713546676220878,
+        "k3": -0.06327267252460228
+      },
+      "rms_px": 0.2404,
+      "p95_px": 0.4868,
+      "num_frames": 24,
+      "usable": true,
+      "calibrated_at": "2026-11-04T14:44:20",
+      "source": "robot_kept"
+    },
+    "right_wrist": {
+      "camera_model": "Pinhole",
+      "image_size": [
+        480,
+        640
+      ],
+      "intrinsic": {
+        "fx": 418.428912796385,
+        "fy": 418.6581527172839,
+        "cx": 305.9966082245748,
+        "cy": 233.10207534359105,
+        "k1": -0.38220075140128873,
+        "k2": 0.17468956617958936,
+        "p1": -0.0004634413779720019,
+        "p2": 0.00026566968480625625,
+        "k3": -0.042308198587675136
+      },
+      "rms_px": 0.2185,
+      "p95_px": 0.4266,
+      "num_frames": 31,
+      "usable": true,
+      "calibrated_at": "2026-11-04T15:04:29",
+      "source": "robot_kept"
+    },
+    "head_left": {
+      "camera_model": "Pinhole",
+      "image_size": [
+        480,
+        640
+      ],
+      "intrinsic": {
+        "fx": 273.34202244855436,
+        "fy": 273.314281551184,
+        "cx": 284.7941615128398,
+        "cy": 246.89790307377433,
+        "k1": 0.05480570763911246,
+        "k2": -0.06301571739408274,
+        "p1": -0.0008319600288727285,
+        "p2": 0.0002839578274113512,
+        "k3": 0.01309791071304562
+      },
+      "rms_px": 0.1831,
+      "p95_px": 0.2948,
+      "num_frames": 28,
+      "usable": true,
+      "calibrated_at": "2026-11-04T15:15:32",
+      "source": "robot_kept"
+    },
+    "head_right": {
+      "camera_model": "Pinhole",
+      "image_size": [
+        480,
+        640
+      ],
+      "intrinsic": {
+        "fx": 270.76029611837316,
+        "fy": 270.7610042423746,
+        "cx": 321.1521137408016,
+        "cy": 242.16929929286047,
+        "k1": 0.06168538794440834,
+        "k2": -0.07584315940653615,
+        "p1": -0.00010131904404793564,
+        "p2": 0.00043579824481929894,
+        "k3": 0.018731068332421087
+      },
+      "rms_px": 0.2117,
+      "p95_px": 0.3993,
+      "num_frames": 32,
+      "usable": true,
+      "calibrated_at": "2026-11-04T15:21:48",
+      "source": "robot_kept"
+    }
+  },
+  "extrinsics": {
+    "head_stereo": {
+      "reference_camera": "head_left",
+      "cameras": [
+        {
+          "name": "head_left",
+          "camera_model": "Pinhole",
+          "image_size": [
+            480,
+            640
+          ],
+          "intrinsic": {
+            "fx": 273.34202244855436,
+            "fy": 273.314281551184,
+            "cx": 284.7941615128398,
+            "cy": 246.89790307377433,
+            "k1": 0.05480570763911246,
+            "k2": -0.06301571739408274,
+            "p1": -0.0008319600288727285,
+            "p2": 0.0002839578274113512,
+            "k3": 0.01309791071304562
+          },
+          "rvec": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tvec": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "head_right",
+          "camera_model": "Pinhole",
+          "image_size": [
+            480,
+            640
+          ],
+          "intrinsic": {
+            "fx": 270.76029611837316,
+            "fy": 270.7610042423746,
+            "cx": 321.1521137408016,
+            "cy": 242.16929929286047,
+            "k1": 0.06168538794440834,
+            "k2": -0.07584315940653615,
+            "p1": -0.00010131904404793564,
+            "p2": 0.00043579824481929894,
+            "k3": 0.018731068332421087
+          },
+          "rvec": [
+            -0.001231,
+            0.017648,
+            -0.000393
+          ],
+          "tvec": [
+            60.107653,
+            -0.038699,
+            -0.355085
+          ]
+        }
+      ],
+      "rms_px": 0.2275,
+      "p95_px": 0.3699,
+      "num_frames": 29,
+      "usable": true,
+      "calibrated_at": "2026-11-04T15:37:53",
+      "source": "robot_kept"
+    }
+  },
+  "handeye": {
+    "left_arm": {
+      "mode": "eye_in_hand",
+      "camera": "left_wrist",
+      "reference_link": "left_wrist_yaw_link",
+      "base_link": "AGV_link",
+      "T_wrist_cam": [
+        [
+          0.002281543462645086,
+          -0.050299050278805046,
+          0.9987315956254108,
+          0.04739539546342546
+        ],
+        [
+          -0.0008219011868469024,
+          -0.9987339520409239,
+          -0.05029729136998,
+          -0.030488768820271742
+        ],
+        [
+          0.9999970595146108,
+          -0.0007061032274721032,
+          -0.0023199957683214256,
+          0.002190008905002873
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "translation_m": [
+        0.04739539546342546,
+        -0.030488768820271742,
+        0.002190008905002873
+      ],
+      "quaternion_xyzw": [
+        0.7076961726743848,
+        -0.018058933140921832,
+        0.7060687666243917,
+        0.017518530570506948
+      ],
+      "camera_model": "Pinhole",
+      "rms_px": 1.3125,
+      "p95_px": 2.0484,
+      "trans_rms_mm": 2.358,
+      "rot_rms_deg": 0.325,
+      "num_frames": 26,
+      "urdf": {
+        "name": "g1_d.urdf",
+        "sha256": "5df561490cb907dccee0d7926531c250a85b89bd3f47a8ff5bcc311c58cc202e",
+        "path": "/home/jun/Project/2026.11.04.uni_calib/urdf/g1_d_description/g1_d.urdf"
+      },
+      "joint_offsets_rad": {
+        "left_wrist_roll_joint": 0.018960690088800043
+      },
+      "intrinsic_calibrated_at": "2026-11-04T14:44:20",
+      "usable": true,
+      "calibrated_at": "2026-11-06T12:20:08",
+      "source": "this_copy"
+    },
+    "right_arm": {
+      "mode": "eye_in_hand",
+      "camera": "right_wrist",
+      "reference_link": "right_wrist_yaw_link",
+      "base_link": "AGV_link",
+      "T_wrist_cam": [
+        [
+          0.020994642432122068,
+          -0.09562519235479122,
+          0.9951959845056936,
+          0.05204456820714134
+        ],
+        [
+          0.006877761419769139,
+          0.9954056457691756,
+          0.09550024486200825,
+          0.02476413436646322
+        ],
+        [
+          -0.9997559309086393,
+          0.004839727054284461,
+          0.021555872866575187,
+          -0.0019147775209302775
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "translation_m": [
+        0.05204456820714134,
+        0.02476413436646322,
+        -0.0019147775209302775
+      ],
+      "quaternion_xyzw": [
+        -0.03175343995684338,
+        0.6987229655719207,
+        0.03590120006795616,
+        0.7137850098362729
+      ],
+      "camera_model": "Pinhole",
+      "rms_px": 1.6219,
+      "p95_px": 2.6334,
+      "trans_rms_mm": 2.32,
+      "rot_rms_deg": 0.357,
+      "num_frames": 22,
+      "urdf": {
+        "name": "g1_d.urdf",
+        "sha256": "5df561490cb907dccee0d7926531c250a85b89bd3f47a8ff5bcc311c58cc202e",
+        "path": "/home/jun/Project/2026.11.04.uni_calib/urdf/g1_d_description/g1_d.urdf"
+      },
+      "joint_offsets_rad": {
+        "right_shoulder_yaw_joint": -0.013328201038543853,
+        "right_elbow_joint": 0.010447780497598787,
+        "right_wrist_roll_joint": -0.016349685373339702
+      },
+      "intrinsic_calibrated_at": "2026-11-04T15:04:29",
+      "usable": true,
+      "calibrated_at": "2026-11-06T12:03:14",
+      "source": "robot_kept"
+    }
+  },
+  "notes": {
+    "extrinsics": "head_stereo: cameras[].rvec/tvec is the rigid transform from camera to the reference camera, p_ref = R(rvec) * p_cam + tvec, tvec in mm",
+    "handeye": "left_arm / right_arm: eye-in-hand; T_wrist_cam is the 4x4 rigid transform from the wrist camera to reference_link (the wrist), p_wrist = T_wrist_cam * p_cam, translation in m; translation_m / quaternion_xyzw express the same transform; rms_px / p95_px are the hand-eye reprojection errors, trans_rms_mm / rot_rms_deg the board-pose consistency errors; if joint_offsets_rad is not empty, T_wrist_cam was solved with joint zero-offset correction: forward kinematics must use actual joint angle = reading + offset"
+  }
+}

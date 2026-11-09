@@ -5,7 +5,8 @@ from dds.dds_master import dds_manager
 def create_dds_objects(args_cli,env):
     publish_names = []
     subscribe_names = []
-    if args_cli.robot_type=="g129" or args_cli.robot_type=="h1_2":
+    # g129 / h1_2 / g1d / r1d all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
+    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1d"):
         from dds.g1_robot_dds import G1RobotDDS
         g1_robot = G1RobotDDS()
         dds_manager.register_object("g129", g1_robot)
@@ -35,6 +36,20 @@ def create_dds_objects(args_cli,env):
         dds_manager.register_object("run_command", run_command_dds)
         publish_names.append("run_command")
         subscribe_names.append("run_command")
+    if args_cli.robot_type == "g1d":
+        # G1-D mobile base + lift column (rt/cmd_vel_no_limit, rt/cmd_hispeed and their states)
+        from dds.g1d_mobile_dds import G1DMobileDDS
+        g1d_mobile = G1DMobileDDS()
+        dds_manager.register_object("g1d_mobile", g1d_mobile)
+        publish_names.append("g1d_mobile")
+        subscribe_names.append("g1d_mobile")
+    if args_cli.robot_type == "r1d":
+        # R1-D base + lift column (rt/cmd_vel, rt/state_vel, rt/height_state, rt/height_alarm @ 50 Hz)
+        from dds.r1d_mobile_dds import R1DMobileDDS
+        dds_manager.register_object("r1d_mobile", R1DMobileDDS())
+        dds_manager.set_publish_rate("r1d_mobile", 50.0)
+        publish_names.append("r1d_mobile")
+        subscribe_names.append("r1d_mobile")
     from dds.reset_pose_dds import ResetPoseCmdDDS
     reset_pose_dds = ResetPoseCmdDDS()
     dds_manager.register_object("reset_pose", reset_pose_dds)
@@ -55,7 +70,8 @@ def create_dds_objects(args_cli,env):
 def create_dds_objects_replay(args_cli,env):
     publish_names = []
     subscribe_names = []
-    if args_cli.robot_type=="g129" or args_cli.robot_type=="h1_2":
+    # g129 / h1_2 / g1d / r1d all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
+    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1d"):
         from dds.g1_robot_dds import G1RobotDDS
         g1_robot = G1RobotDDS()
         dds_manager.register_object("g129", g1_robot)

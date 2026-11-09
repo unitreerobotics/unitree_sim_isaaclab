@@ -1,0 +1,13 @@
+# assets are mounted at run time (see README), not copied into the image
+.git
+assets
+unitree_sim_isaaclab_usds
+data
+data*/
+**/__pycache__
+**/*.pyc
+*.egg-info
+**/*.egg-info
+.vscode
+.idea
+*.log

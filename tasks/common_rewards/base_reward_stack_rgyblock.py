@@ -81,17 +81,17 @@ def compute_reward(
     green_block: RigidObject = env.scene[green_block_cfg.name]
     
     # 2. get object position
-    red_block_x = red_block.data.root_pos_w[:, 0]         # x position
-    red_block_y = red_block.data.root_pos_w[:, 1]        # y position
-    red_block_height = red_block.data.root_pos_w[:, 2]   # z position (height)
+    red_block_x = red_block.data.root_pos_w.torch[:, 0]         # x position
+    red_block_y = red_block.data.root_pos_w.torch[:, 1]        # y position
+    red_block_height = red_block.data.root_pos_w.torch[:, 2]   # z position (height)
 
-    yellow_block_x = yellow_block.data.root_pos_w[:, 0]         # x position
-    yellow_block_y = yellow_block.data.root_pos_w[:, 1]        # y position
-    yellow_block_height = yellow_block.data.root_pos_w[:, 2]   # z position (height)
+    yellow_block_x = yellow_block.data.root_pos_w.torch[:, 0]         # x position
+    yellow_block_y = yellow_block.data.root_pos_w.torch[:, 1]        # y position
+    yellow_block_height = yellow_block.data.root_pos_w.torch[:, 2]   # z position (height)
 
-    green_block_x = green_block.data.root_pos_w[:, 0]         # x position
-    green_block_y = green_block.data.root_pos_w[:, 1]        # y position
-    green_block_height = green_block.data.root_pos_w[:, 2]   # z position (height)
+    green_block_x = green_block.data.root_pos_w.torch[:, 0]         # x position
+    green_block_y = green_block.data.root_pos_w.torch[:, 1]        # y position
+    green_block_height = green_block.data.root_pos_w.torch[:, 2]   # z position (height)
     
     # check if all blocks are in the working area
     red_done_x = (red_block_x < max_x) & (red_block_x > min_x)
@@ -113,7 +113,7 @@ def compute_reward(
     all_in_area = red_in_area & yellow_in_area & green_in_area
 
     # create reward tensor
-    reward = torch.zeros(env.num_envs, device=env.device, dtype=torch.float)
+    reward = torch.zeros(env.num_envs, device=str(env.device), dtype=torch.float)
     
     # basic penalty: if any block is not in the working area
     reward[~all_in_area] = -1.0

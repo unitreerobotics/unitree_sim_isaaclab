@@ -1,5 +1,4 @@
-rerun-sdk==0.20.1
-pyzmq==27.0.0
+rerun-sdk==0.23.4
 logging_mp==0.1.5
 onnxruntime==1.22.1
 onnx

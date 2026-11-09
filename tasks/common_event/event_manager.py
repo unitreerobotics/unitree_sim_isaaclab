@@ -43,7 +43,7 @@ class MultiObjectEvent:
         """
         触发多物体重置事件
         """
-        env_ids = torch.arange(env.num_envs, device=env.device)
+        env_ids = torch.arange(env.num_envs, device=str(env.device))
         results = []
         
         for config in self.reset_configs:
@@ -81,7 +81,7 @@ class BatchObjectEvent:
     
     def trigger(self, env):
         """触发批量重置"""
-        env_ids = torch.arange(env.num_envs, device=env.device)
+        env_ids = torch.arange(env.num_envs, device=str(env.device))
         results = []
         
         for obj_name in self.object_names:

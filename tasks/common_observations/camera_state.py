@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 import torch
 import sys
 import os
-import threading
-import queue
 
 # add the project root directory to the path, so that the shared memory tool can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -36,140 +34,78 @@ _camera_cache = {
     'camera_keys': None,
     'last_scene_id': None,
     'frame_step': 0,
-    'write_interval_steps': 2,
+    'write_interval_steps': 1,  # write at most every N env steps (a new frame is written only once anyway)
+    'last_frame': None,
 }
 
+# shared memory name -> scene camera name
+_CAMERA_IMAGES = (
+    ("head", "front_camera"),  # head stereo left eye
+    ("head_right", "front_right_camera"),  # head stereo right eye
+    ("left", "left_wrist_camera"),
+    ("right", "right_wrist_camera"),
+)
 
 _return_placeholder = None
-_async_queue = None
-_async_thread = None
-_async_started = False
 
-def _async_writer_loop(q: "queue.Queue", writer: MultiImageWriter):
-    while True:
-        try:
-            item = q.get()
-            if item is None:
-                break
-            writer.write_images(item)
-        except Exception as e:
-            print(f"[camera_state] Async writer error: {e}")
 
-def _ensure_async_started():
-    global _async_started, _async_queue, _async_thread
-    if not _async_started:
-        _async_queue = queue.Queue(maxsize=1)
-        _async_thread = threading.Thread(target=_async_writer_loop, args=(_async_queue, multi_image_writer), daemon=True)
-        _async_thread.start()
-        _async_started = True
+def _camera_frame(camera) -> int | None:
+    """Render frame counter of a camera (Isaac Lab 3), None if not available."""
+    try:
+        frame = camera.frame
+        frame = frame.torch if hasattr(frame, "torch") else frame
+        return int(frame[0])
+    except Exception:
+        return None
 
 
 def get_camera_image(
     env: ManagerBasedRLEnv,
 ) -> dict:
-    # pass
-    """get multiple camera images and write them to shared memory
-    
-    Args:
-        env: ManagerBasedRLEnv - reinforcement learning environment instance
-    
-    Returns:
-        dict: dictionary containing multiple camera images
+    """Write the camera images to shared memory (read by the image server).
+
+    Images are written only when the cameras rendered a new frame (render rate: sim_main --render_fps), and
+    synchronously: the former writer thread hardly got the GIL while the main thread was stepping the simulation
+    and published only ~19 fps; one write (4 x 640x480, JPEG) takes ~2 ms.
     """
     global _return_placeholder
     if _return_placeholder is None:
         _return_placeholder = torch.zeros((1, 480, 640, 3))
 
-
-    _camera_cache['frame_step'] = (_camera_cache['frame_step'] + 1) % max(1, _camera_cache['write_interval_steps'])
-
-
     scene_id = id(env.scene)
     if _camera_cache['last_scene_id'] != scene_id:
-        _camera_cache['camera_keys'] = list(env.scene.keys())
-        _camera_cache['available_cameras'] = [name for name in _camera_cache['camera_keys'] if "camera" in name.lower()]
+        keys = list(env.scene.keys())
+        _camera_cache['camera_keys'] = keys
+        _camera_cache['available_cameras'] = [name for name in keys if "camera" in name.lower()]
         _camera_cache['last_scene_id'] = scene_id
-
-
-    if _camera_cache['frame_step'] == 0:
-        try:
-            dt = getattr(env, 'physics_dt', 0.02)
-            if hasattr(env.scene, 'sensors') and env.scene.sensors:
-                for sensor in env.scene.sensors.values():
-                    try:
-                        sensor.update(dt, force_recompute=False)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-    
-    # get the camera images
-    images = {}
-    # env.sim.render()
-    
-
+        _camera_cache['last_frame'] = None
     camera_keys = _camera_cache['camera_keys']
-    # Head camera (front camera)
-    if "front_camera" in camera_keys:
-        head_image = env.scene["front_camera"].data.output["rgb"][0]  # [batch, height, width, 3]
 
-        if head_image.device.type == 'cpu':
-            images["head"] = head_image.numpy()
-        else:
-            images["head"] = head_image.cpu().numpy()
-    
-    # Left camera (left wrist camera)
-    if "left_wrist_camera" in camera_keys:
-        left_image = env.scene["left_wrist_camera"].data.output["rgb"][0]
-        if left_image.device.type == 'cpu':
-            images["left"] = left_image.numpy()
-        else:
-            images["left"] = left_image.cpu().numpy()
-    
-    # Right camera (right wrist camera)  
-    if "right_wrist_camera" in camera_keys:
-        right_image = env.scene["right_wrist_camera"].data.output["rgb"][0]
-        if right_image.device.type == 'cpu':
-            images["right"] = right_image.numpy()
-        else:
-            images["right"] = right_image.cpu().numpy()
-    
-    # if no camera with the specified name is found, try other common camera names
-    if not images:
+    _camera_cache['frame_step'] = (_camera_cache['frame_step'] + 1) % max(1, _camera_cache['write_interval_steps'])
+    if _camera_cache['frame_step'] != 0:
+        return _return_placeholder
 
-        available_cameras = _camera_cache['available_cameras']
-        if available_cameras:
-            print(f"[camera_state] No standard cameras found. Available cameras: {available_cameras}")
-            
-            # if there are available cameras, use the first three as head, left, right
-            for i, camera_name in enumerate(available_cameras[:3]):
-                camera_image = env.scene[camera_name].data.output["rgb"][0]
-                
-               
-                if camera_image.device.type == 'cpu':
-                    numpy_image = camera_image.numpy()
-                else:
-                    numpy_image = camera_image.cpu().numpy()
-                
-                if i == 0:
-                    images["head"] = numpy_image
-                elif i == 1:
-                    images["left"] = numpy_image
-                elif i == 2:
-                    images["right"] = numpy_image
-    
+    pairs = [(img, cam) for img, cam in _CAMERA_IMAGES if cam in camera_keys]
+    if not pairs:
+        # fallback: the first three cameras of the scene as head / left / right
+        pairs = list(zip(("head", "left", "right"), _camera_cache['available_cameras'][:3]))
+        if not pairs:
+            return _return_placeholder
 
-    if images and _camera_cache['frame_step'] == 0:
-        _ensure_async_started()
-        try:
-            
-            if _async_queue.full():
-                _async_queue.get_nowait()
-            _async_queue.put_nowait(images)
-        except Exception:
-            pass
-    elif not images:
-        print("[camera_state] No camera images found in the environment")
-    
+    # Isaac Lab 3 cameras update lazily: accessing .data renders the cameras whose update_period has elapsed
+    # (all of them in one RTX frame). Then skip if no new frame was rendered since the last write.
+    for _, cam_name in pairs:
+        env.scene[cam_name].data
+    frame = _camera_frame(env.scene[pairs[0][1]])
+    if frame is not None:
+        if frame == _camera_cache['last_frame']:
+            return _return_placeholder
+        _camera_cache['last_frame'] = frame
+
+    images = {}
+    for img_name, cam_name in pairs:
+        rgb = env.scene[cam_name].data.output["rgb"]
+        rgb = (rgb.torch if hasattr(rgb, "torch") else rgb)[0]
+        images[img_name] = rgb.numpy() if rgb.device.type == "cpu" else rgb.cpu().numpy()
+    multi_image_writer.write_images(images)
     return _return_placeholder
-

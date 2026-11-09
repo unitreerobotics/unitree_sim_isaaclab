@@ -7,7 +7,7 @@ from dataclasses import MISSING
 from pink.tasks import FrameTask
 
 import isaaclab.envs.mdp as base_mdp
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from tasks.common_config.env_configs import UnitreeManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -40,13 +40,14 @@ class ObjectTableSceneCfg(TableCylinderSceneCfgWH):
     # Humanoid robot w/ arms higher
     # 5. humanoid robot configuration 
     robot: ArticulationCfg = G1RobotPresets.g1_29dof_inspire_wholebody(init_pos=(-3.9, -2.81811, 0.8),
-        init_rot=(1, 0, 0, 0))
+        init_rot=(0, 0, 0, 1))
 
     contact_forces = ContactSensorCfg(prim_path="/World/envs/env_.*/Robot/.*", history_length=10, track_air_time=True, debug_vis=False)
     # 6. add camera configuration 
     front_camera = CameraPresets.g1_front_camera()
-    left_wrist_camera = CameraPresets.left_inspire_wrist_camera()
-    right_wrist_camera = CameraPresets.right_inspire_wrist_camera()
+    front_right_camera = CameraPresets.g1_front_right_camera()
+    left_wrist_camera = CameraPresets.left_inspire_wrist_camera(calibrated=True)
+    right_wrist_camera = CameraPresets.right_inspire_wrist_camera(calibrated=True)
     robot_camera = CameraPresets.g1_world_camera()
 ##
 # MDP settings
@@ -118,9 +119,9 @@ class EventCfg:
 
 
 @configclass
-class MoveCylinderG129InspireWholebodyEnvCfg(ManagerBasedRLEnvCfg):
+class MoveCylinderG129InspireWholebodyEnvCfg(UnitreeManagerBasedRLEnvCfg):
     """
-    inherits from ManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
+    inherits from UnitreeManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
     """
 
     # 1. scene settings
@@ -147,10 +148,10 @@ class MoveCylinderG129InspireWholebodyEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.scene.contact_forces.update_period = self.sim.dt
         self.sim.render_interval = self.decimation
-        self.sim.physx.bounce_threshold_velocity = 0.01
-        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
-        self.sim.physx.friction_correlation_distance = 0.00625
+        self.sim.physics.bounce_threshold_velocity = 0.01
+        self.sim.physics.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physics.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physics.friction_correlation_distance = 0.00625
 
                 # 物理材料属性设置 / Physics material properties
         self.sim.physics_material.static_friction = 1.0  # 静摩擦系数 / Static friction
@@ -164,7 +165,7 @@ class MoveCylinderG129InspireWholebodyEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_object_self", SimpleEvent(
             func=lambda env: base_mdp.reset_root_state_uniform(
                 env,
-                torch.arange(env.num_envs, device=env.device),
+                torch.arange(env.num_envs, device=str(env.device)),
                 pose_range={"x": [-0.05, 0.05], "y": [0.0, 0.05]},
                 velocity_range={},
                 asset_cfg=SceneEntityCfg("object"),
@@ -174,5 +175,5 @@ class MoveCylinderG129InspireWholebodyEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
                 env,
-                torch.arange(env.num_envs, device=env.device))
+                torch.arange(env.num_envs, device=str(env.device)))
         ))

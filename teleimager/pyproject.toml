@@ -1,0 +1,41 @@
+[project]
+name = "teleimager"
+version = "1.5.0"
+description = "TeleImager: multi-camera image streaming service for unitree teleoperation"
+authors = [
+    { name = "silencht", email = "silencht@qq.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.8,<3.13"
+dependencies = [
+    "logging_mp",
+    "opencv-python",
+    "numpy>=1.21",  # numpy 2 works; Isaac Sim 6 / Isaac Lab 3 need numpy >= 2
+    "pyyaml",
+    "pyzmq",
+]
+[project.optional-dependencies]
+# execute pip install -e ".[server]" to install server dependencies
+server = [
+    "aiohttp",
+    "aiortc",
+    "pupil-labs-uvc",
+]
+
+[project.urls]
+Homepage = "https://github.com/unitreerobotics/teleimager"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+teleimager-server = "teleimager.image_server:main"
+teleimager-client = "teleimager.image_client:main"

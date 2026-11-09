@@ -194,7 +194,7 @@ class FileActionProviderReplay(ActionProvider):
                 elif self.enable_inspire:
                     hand_cmd_data = self.hand_action[self.action_index]
                 
-                env.scene.reset_to(self.sim_state_list[self.action_index], torch.tensor([0], device=env.device), is_relative=True)
+                env.scene.reset_to(self.sim_state_list[self.action_index], torch.tensor([0], device=str(env.device)), is_relative=True)
                 
                 if self.generate_data:
                     for sensor in env.scene.sensors.values():
@@ -237,7 +237,7 @@ class FileActionProviderReplay(ActionProvider):
         print(f"[{self.name}] Resource cleanup completed")
     def get_state(self,env):
 
-        joint_pos = env.scene["robot"].data.joint_pos
+        joint_pos = env.scene["robot"].data.joint_pos.torch
         left_arm_joint_pose = joint_pos[:,self.left_arm_joint_indices][0].detach().cpu().numpy().tolist()
         right_arm_joint_pose = joint_pos[:,self.right_arm_joint_indices][0].detach().cpu().numpy().tolist()
         if self.enable_gripper:

@@ -172,7 +172,7 @@ class RobotBaseCfg:
         cls,
         prim_path: str = "/World/envs/env_.*/Robot",
         init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.744),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071),
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071),
         include_waist: bool = True,
         hand_type: Literal["gripper", "dex3", "inspire"] = "gripper",
         base_config = None,
@@ -250,7 +250,7 @@ class G1RobotPresets:
     
     @classmethod
     def g1_29dof_dex1_base_fix(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.76),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - simple gripper"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -261,7 +261,7 @@ class G1RobotPresets:
     
     @classmethod
     def g1_29dof_dex3_base_fix(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.76),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - dex3 hand"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -274,7 +274,7 @@ class G1RobotPresets:
 
     @classmethod
     def g1_29dof_inspire_base_fix(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.76),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - inspire hand"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -285,7 +285,7 @@ class G1RobotPresets:
         )
     @classmethod
     def g1_29dof_dex1_wholebody(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.80),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - inspire hand"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -296,7 +296,7 @@ class G1RobotPresets:
             update_default_joint_pos=False )
     @classmethod
     def g1_29dof_dex3_wholebody(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.80),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - inspire hand"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -307,7 +307,7 @@ class G1RobotPresets:
             update_default_joint_pos=False )
     @classmethod
     def g1_29dof_inspire_wholebody(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.80),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:
         """pick-place task configuration - inspire hand"""
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
@@ -325,8 +325,8 @@ class H12RobotPresets:
     """
     
     @classmethod
-    def h12_27dof_inspire_base_fix(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 0.76),
-        init_rot: Tuple[float, float, float, float] = (0.7071, 0, 0, 0.7071)) -> ArticulationCfg:   
+    def h12_27dof_inspire_base_fix(cls,init_pos: Tuple[float, float, float] = (-0.15, 0.0, 1.03),  # standing on the floor
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071)) -> ArticulationCfg:   
         return RobotBaseCfg.get_base_config(
             init_pos=init_pos,
             init_rot=init_rot,

@@ -30,7 +30,7 @@ https://docs.isaacsim.omniverse.nvidia.com/latest/robot_setup/ext_isaacsim_asset
 
 import argparse
 
-from isaaclab.app import AppLauncher
+from isaaclab.app import add_launcher_args, launch_simulation
 
 # 添加命令行参数解析
 parser = argparse.ArgumentParser(description="URDF转USD格式的工具")
@@ -63,14 +63,10 @@ parser.add_argument(
     help="关节驱动的控制类型",
 )
 
-# 添加AppLauncher的命令行参数
-AppLauncher.add_app_launcher_args(parser)
+# 添加 Isaac Lab 3.0 启动参数
+add_launcher_args(parser)
 # 解析命令行参数
 args_cli = parser.parse_args()
-
-# 启动omniverse应用
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
 
 """以下是主要功能实现"""
 
@@ -82,6 +78,7 @@ import isaacsim.core.utils.stage as stage_utils
 import omni.kit.app
 
 from isaaclab.sim.converters import UrdfConverter, UrdfConverterCfg
+from isaaclab.physics import PhysicsCfg
 from isaaclab.utils.assets import check_file_path
 from isaaclab.utils.dict import print_dict
 
@@ -94,7 +91,7 @@ def main():
         urdf_path = os.path.abspath(urdf_path)
     if not check_file_path(urdf_path):
         raise ValueError(f"无效的文件路径: {urdf_path}")
-    
+
     # 创建输出文件路径
     dest_path = "/home/unitree/newDisk/URDF/urdf-to-usd/h1_2_inspire/h1_2.urdf.usd"
     if not os.path.isabs(dest_path):
@@ -126,37 +123,29 @@ def main():
     print("-" * 80)
     print("-" * 80)
 
-    # 创建URDF转换器并导入文件
-    urdf_converter = UrdfConverter(urdf_converter_cfg)
-    # 打印输出信息
-    print("URDF导入器输出:")
-    print(f"生成的USD文件: {urdf_converter.usd_path}")
-    print("-" * 80)
-    print("-" * 80)
+    # Isaac Lab 3.0 uses a context-managed launcher instead of AppLauncher.
+    with launch_simulation(cfg=PhysicsCfg(), launcher_args=args_cli):
+        # 创建URDF转换器并导入文件
+        urdf_converter = UrdfConverter(urdf_converter_cfg)
+        # 打印输出信息
+        print("URDF导入器输出:")
+        print(f"生成的USD文件: {urdf_converter.usd_path}")
+        print("-" * 80)
+        print("-" * 80)
 
-    # 检查是否有GUI需要更新:
-    # 获取设置接口
-    carb_settings_iface = carb.settings.get_settings()
-    # 读取本地GUI是否启用的标志
-    local_gui = carb_settings_iface.get("/app/window/enabled")
-    # 读取直播GUI是否启用的标志
-    livestream_gui = carb_settings_iface.get("/app/livestream/enabled")
+        # 检查是否有GUI需要更新:
+        carb_settings_iface = carb.settings.get_settings()
+        local_gui = carb_settings_iface.get("/app/window/enabled")
+        livestream_gui = carb_settings_iface.get("/app/livestream/enabled")
 
-    # 如果启用了GUI，则运行模拟场景
-    if local_gui or livestream_gui:
-        # 打开USD场景
-        stage_utils.open_stage(urdf_converter.usd_path)
-        # 重新初始化模拟
-        app = omni.kit.app.get_app_interface()
-        # 运行模拟
-        with contextlib.suppress(KeyboardInterrupt):
-            while app.is_running():
-                # 执行模拟步骤
-                app.update()
+        # 如果启用了GUI，则运行模拟场景
+        if local_gui or livestream_gui:
+            stage_utils.open_stage(urdf_converter.usd_path)
+            app = omni.kit.app.get_app_interface()
+            with contextlib.suppress(KeyboardInterrupt):
+                while app.is_running():
+                    app.update()
 
 
 if __name__ == "__main__":
-    # 运行主函数
     main()
-    # 关闭模拟应用
-    simulation_app.close()

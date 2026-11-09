@@ -32,7 +32,7 @@ class TablePickRedblockIntoDrawerSceneCfg(InteractiveSceneCfg): # inherit from t
         prim_path="/World/envs/env_.*/Room",
         init_state=AssetBaseCfg.InitialStateCfg(
             pos=[0.0, 0.0, 0],  # room center point
-            rot=[1.0, 0.0, 0.0, 0.0]
+            rot=[0.0, 0.0, 0.0, 1.0]
         ),
         spawn=UsdFileCfg(
             usd_path=f"{project_root}/assets/objects/small_warehouse/small_warehouse_digital_twin.usd",  # use simple room model
@@ -55,7 +55,7 @@ class TablePickRedblockIntoDrawerSceneCfg(InteractiveSceneCfg): # inherit from t
         prim_path="/World/envs/env_.*/Red_block",
         init_state=RigidObjectCfg.InitialStateCfg(
             pos=[-2.5, -4.15, 0.84],
-            rot=[1, 0, 0, 0]
+            rot=[0, 0, 0, 1]
         ),
         spawn=sim_utils.CuboidCfg(
             size=(0.05, 0.05, 0.05),
@@ -99,7 +99,7 @@ class TablePickRedblockIntoDrawerSceneCfg(InteractiveSceneCfg): # inherit from t
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(-2.5,-4.35,0.45),
-            rot=(0.7071, 0, 0, 0.7071),
+            rot=(0, 0, 0.7071, 0.7071),
             joint_pos={
                 "door_left_joint": 0.0,
                 "door_right_joint": 0.0,
@@ -136,7 +136,7 @@ class TablePickRedblockIntoDrawerSceneCfg(InteractiveSceneCfg): # inherit from t
                 name="drawer_handle_bottom",
                 offset=OffsetCfg(
                     pos=(0.305, 0.0, 0.01),
-                    rot=(0.5, 0.5, -0.5, -0.5),  # align with end-effector frame
+                    rot=(0.5, -0.5, -0.5, 0.5),  # align with end-effector frame
                 ),
             ),
         ],
@@ -160,6 +160,6 @@ class TablePickRedblockIntoDrawerSceneCfg(InteractiveSceneCfg): # inherit from t
 
     world_camera = CameraBaseCfg.get_camera_config(prim_path="/World/PerspectiveCamera",
                                                     pos_offset=(-2.5, -4.8, 1.8),
-                                                    rot_offset=( -0.3173,0.94833, 0.0, 0.0))
+                                                    rot_offset=(0.94833, 0.0, 0.0, -0.3173))
 
 

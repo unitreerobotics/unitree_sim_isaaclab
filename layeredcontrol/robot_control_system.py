@@ -35,7 +35,16 @@ class RobotController:
         self._last_step_time = 0.0
         
         all_joint_names = env.scene["robot"].data.joint_names
-        self._last_action = torch.zeros(len(all_joint_names), device=env.device)
+        self._last_action = torch.zeros((env.num_envs, len(all_joint_names)), device=str(env.device))
+        # JointPositionActionCfg uses the default pose as an offset. Bound the
+        # raw commands accordingly before PhysX receives position targets.
+        action_term = env.action_manager.get_term("joint_pos")
+        joint_ids = action_term._joint_ids
+        limits = env.scene["robot"].data.soft_joint_pos_limits.torch[:, joint_ids, :]
+        offset = action_term._offset
+        scale = action_term._scale
+        self._action_min = (limits[..., 0] - offset) / scale
+        self._action_max = (limits[..., 1] - offset) / scale
         
         
         # pre-calculate the sleep threshold (avoid calculating every time)
@@ -109,11 +118,18 @@ class RobotController:
         if self.action_provider:
             action = self.action_provider.get_action(self.env)
             if action is not None:
-                self._last_action = action
+                self._last_action = action.clone()
         
         # if no action is obtained, use the pre-calculated fallback strategy
         if action is None:
             action = self._last_action
+
+        if action.shape != self._last_action.shape:
+            raise ValueError(f"Expected action shape {tuple(self._last_action.shape)}, got {tuple(action.shape)}")
+        if not torch.isfinite(action).all():
+            bad = (~torch.isfinite(action)).nonzero(as_tuple=False).tolist()
+            raise ValueError(f"DDS action contains NaN or Inf at indices {bad[:8]}")
+        action = torch.clamp(action, min=self._action_min, max=self._action_max)
 
         action_time = perf_counter() - action_start
         
@@ -125,6 +141,9 @@ class RobotController:
                 # self.env.sim.render()
             else:
                 self.env.step(action)
+                link_poses = self.env.scene["robot"].data.body_link_pose_w.torch
+                if not torch.isfinite(link_poses).all() or torch.any(torch.abs(link_poses[..., :3]) > 100.0):
+                    raise RuntimeError("Robot link pose diverged; stopping before further PhysX/render steps. Check the USD articulation, gravity setting, and action targets.")
             env_time = perf_counter() - env_start
             
             self.step_count += 1

@@ -1,8 +1,8 @@
 # Copyright (c) 2025, Unitree Robotics Co., Ltd. All Rights Reserved.
-# License: Apache License, Version 2.0  
+# License: Apache License, Version 2.0
 """
 dex3 state
-"""     
+"""
 from __future__ import annotations
 
 import torch
@@ -56,16 +56,16 @@ _dds_initialized = False
 def _get_dex3_dds_instance():
     """get the DDS instance, delay initialization"""
     global _dex3_dds, _dds_initialized
-    
+
     if not _dds_initialized or _dex3_dds is None:
         try:
             # dynamically import the DDS module
             sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'dds'))
             from dds.dds_master import dds_manager
-            
+
             _dex3_dds = dds_manager.get_object("dex3")
             print("[Observations Dex3] DDS communication instance obtained")
-            
+
             # register the cleanup function
             import atexit
             def cleanup_dds():
@@ -76,13 +76,13 @@ def _get_dex3_dds_instance():
                 except Exception as e:
                     print(f"[dex3_state] Error closing DDS: {e}")
             atexit.register(cleanup_dds)
-            
+
         except Exception as e:
             print(f"[Observations Dex3] Failed to get DDS instances: {e}")
             _dex3_dds = None
-        
+
         _dds_initialized = True
-    
+
     return _dex3_dds
 
 def get_robot_dex3_joint_states(
@@ -90,21 +90,21 @@ def get_robot_dex3_joint_states(
     enable_dds: bool = True,
 ) -> torch.Tensor:
     """get the robot gripper joint states and publish them to DDS
-    
+
     Args:
         env: ManagerBasedRLEnv - reinforcement learning environment instance
         enable_dds: bool - whether to enable the DDS publish function
-    
+
     Returns:
         torch.Tensor
     """
     # get the gripper joint positions, velocities, torques
-    joint_pos = env.scene["robot"].data.joint_pos
-    joint_vel = env.scene["robot"].data.joint_vel  
-    joint_torque = env.scene["robot"].data.applied_torque
+    joint_pos = env.scene["robot"].data.joint_pos.torch
+    joint_vel = env.scene["robot"].data.joint_vel.torch
+    joint_torque = env.scene["robot"].actuators.applied_effort.torch
     device = joint_pos.device
     batch = joint_pos.shape[0]
-    
+
 
     global _obs_cache
     if _obs_cache["device"] != device or _obs_cache["hand_idx_t"] is None:
@@ -137,7 +137,7 @@ def get_robot_dex3_joint_states(
         pos_buf.copy_(torch.gather(joint_pos, 1, idx_batch))
         vel_buf.copy_(torch.gather(joint_vel, 1, idx_batch))
         torque_buf.copy_(torch.gather(joint_torque, 1, idx_batch))
-    
+
     # publish to DDS (only publish the data of the first environment)
     if enable_dds and len(pos_buf) > 0:
         try:
@@ -159,6 +159,6 @@ def get_robot_dex3_joint_states(
                     _obs_cache["dds_last_ms"] = now_ms
         except Exception as e:
             print(f"dex3_state [dex3_state] Failed to write to DDS: {e}")
-    
+
     return pos_buf
 

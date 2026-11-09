@@ -7,7 +7,7 @@ from dataclasses import MISSING
 
 
 import isaaclab.envs.mdp as base_mdp
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from tasks.common_config.env_configs import UnitreeManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -22,6 +22,7 @@ from . import mdp
 from tasks.common_config import  H12RobotPresets, CameraPresets  # isort: skip
 from tasks.common_event.event_manager import SimpleEvent, SimpleEventManager
 
+from tasks.common_scene.h12_table_height import lift_table_scene_for_h12
 # import public scene configuration
 from tasks.common_scene.base_scene_pickplace_redblock import TableRedBlockSceneCfg
 
@@ -39,14 +40,15 @@ class ObjectTableSceneCfg(TableRedBlockSceneCfg):
     
     # Humanoid robot w/ arms higher
     # 5. humanoid robot configuration 
-    robot: ArticulationCfg = H12RobotPresets.h12_27dof_inspire_base_fix(init_pos=(-4.2, -3.7, 0.76),
-        init_rot=(0.7071, 0, 0, -0.7071))
+    robot: ArticulationCfg = H12RobotPresets.h12_27dof_inspire_base_fix(init_pos=(-4.2, -3.7, 1.03),
+        init_rot=(0, 0, -0.7071, 0.7071))
 
 
     # 6. add camera configuration 
-    front_camera = CameraPresets.h12_front_camera()
-    left_wrist_camera = CameraPresets.left_inspire_wrist_camera()
-    right_wrist_camera = CameraPresets.right_inspire_wrist_camera()
+    front_camera = CameraPresets.h12_front_camera()  # head stereo left eye
+    front_right_camera = CameraPresets.h12_front_right_camera()  # head stereo right eye
+    left_wrist_camera = CameraPresets.h12_left_inspire_wrist_camera()
+    right_wrist_camera = CameraPresets.h12_right_inspire_wrist_camera()
 
 ##
 # MDP settings
@@ -119,9 +121,9 @@ class EventCfg:
 
 
 @configclass
-class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
+class PickPlaceH1227dofInspireHandBaseFixEnvCfg(UnitreeManagerBasedRLEnvCfg):
     """Unitree G1 robot pick place environment configuration class
-    inherits from ManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
+    inherits from UnitreeManagerBasedRLEnvCfg, defines all configuration parameters for the entire environment
     """
 
     # 1. scene settings
@@ -141,21 +143,19 @@ class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
     curriculum = None # curriculum manager
     def __post_init__(self):
         """Post initialization."""
+        # H1-2 stands on the floor (pelvis 1.03 m): raise the work table, the objects and the height thresholds
+        lift_table_scene_for_h12(self, objects=['object'])
         self.decimation = 2
         self.episode_length_s = 20.0
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
-        self.sim.physx.bounce_threshold_velocity = 0.01
-        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 32 * 1024
-        self.sim.physx.friction_correlation_distance = 0.003
-        self.sim.physx.enable_ccd = True
-        self.sim.physx.gpu_constraint_solver_heavy_spring_enabled = True
-        self.sim.physx.num_substeps = 2
-        self.sim.physx.contact_offset = 0.015
-        self.sim.physx.rest_offset = 0.001
-        self.sim.physx.num_position_iterations = 12
-        self.sim.physx.num_velocity_iterations = 4
+        self.sim.physics.bounce_threshold_velocity = 0.01
+        self.sim.physics.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physics.gpu_total_aggregate_pairs_capacity = 32 * 1024
+        self.sim.physics.friction_correlation_distance = 0.003
+        self.sim.physics.enable_ccd = True
+        self.sim.physics.min_position_iteration_count = 12
+        self.sim.physics.min_velocity_iteration_count = 4
 
         # create event manager
         self.event_manager = SimpleEventManager() 
@@ -164,7 +164,7 @@ class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_object_self", SimpleEvent(
             func=lambda env: base_mdp.reset_root_state_uniform(
                 env,
-                torch.arange(env.num_envs, device=env.device),
+                torch.arange(env.num_envs, device=str(env.device)),
                 pose_range={"x": [-0.05, 0.05], "y": [-0.05, 0.05]},
                 velocity_range={},
                 asset_cfg=SceneEntityCfg("object"),
@@ -174,5 +174,5 @@ class PickPlaceH1227dofInspireHandBaseFixEnvCfg(ManagerBasedRLEnvCfg):
         self.event_manager.register("reset_all_self", SimpleEvent(
             func=lambda env: base_mdp.reset_scene_to_default(
                 env,
-                torch.arange(env.num_envs, device=env.device))
+                torch.arange(env.num_envs, device=str(env.device)))
         ))
