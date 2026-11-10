@@ -20,7 +20,6 @@ from pathlib import Path
 # Isaac Lab 3.0 simulation launcher
 from isaaclab.app import add_launcher_args, launch_simulation
 
-from teleimager.image_server import run_isaacsim_server
 from dds.dds_create import create_dds_objects,create_dds_objects_replay
 # add command line arguments
 parser = argparse.ArgumentParser(description="Unitree Simulation")
@@ -480,7 +479,9 @@ def main(env_cfg):
         print("========= create image server =========")
         try:
             if args_cli.image_server_in_process:
-                image_server = run_isaacsim_server()
+                from tools.image_server_process import run_image_server
+
+                image_server = run_image_server()
             else:
                 from tools.image_server_process import ImageServerProcess
 

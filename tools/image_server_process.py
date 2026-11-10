@@ -22,6 +22,20 @@ _READY = "IMAGE_SERVER_READY"
 _FAILED = "IMAGE_SERVER_FAILED"
 
 
+def run_image_server(config_path: str | None = None):
+    """Start the teleimager server for the simulator cameras in this process and return it.
+
+    Config: ``config_path``, else $TELEIMAGER_CONFIG, else the simulator config bundled with teleimager
+    (head stereo 1280x480 on ZMQ 55555 / WebRTC 60001, wrists on 55556 / 60002 and 55557 / 60003).
+
+    Raises:
+        OSError: a port is already in use.
+    """
+    from teleimager.server import run_isaacsim_server
+
+    return run_isaacsim_server(config_path)
+
+
 class ImageServerProcess:
     """Image server in a child process; ``start()`` raises if the server could not be started (e.g. port in use)."""
 
@@ -76,16 +90,14 @@ def _main() -> None:
     import signal
 
     try:
-        from teleimager.image_server import run_isaacsim_server
-
-        server = run_isaacsim_server()
+        server = run_image_server()
     except BaseException as e:  # noqa: BLE001 - report every startup failure to the parent
         print(f"{_FAILED} {type(e).__name__}: {e}", flush=True)
         sys.exit(1)
     signal.signal(signal.SIGTERM, lambda *_: server.stop())
     signal.signal(signal.SIGINT, lambda *_: server.stop())
     print(_READY, flush=True)
-    server.wait()
+    server.wait_until_stopped()
 
 
 if __name__ == "__main__":

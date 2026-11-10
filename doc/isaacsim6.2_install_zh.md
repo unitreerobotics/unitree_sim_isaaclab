@@ -6,9 +6,9 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/unitreerobotics/unitree_sim_isaaclab.git
+git clone --recurse-submodules https://github.com/unitreerobotics/unitree_sim_isaaclab.git
 cd unitree_sim_isaaclab
-sudo apt install cmake build-essential openssl git-lfs unzip
+sudo apt install cmake build-essential openssl git-lfs unzip libturbojpeg
 ```
 
 ### 2. 创建 conda 环境
@@ -83,17 +83,20 @@ pip install -e .
 ```bash
 cd ../unitree_sim_isaaclab
 pip install -r requirements.txt
-cd teleimager && pip install -e . && cd ..
+git submodule update --init teleimager   # 图像服务（子模块，sim 分支）
+pip install -e "./teleimager[server]"
 ```
 
-图像服务配置 `teleimager/cam_config_server.yaml` 已按仿真设置好（`type: isaacsim`，头部双目 `image_shape: [480, 1280]`），无需修改。
+图像服务的仿真相机配置随 teleimager 包提供（`teleimager/src/teleimager/teleimager_server_isaacsim.yaml`：`type: isaacsim`，头部双目 `image_shape: [480, 1280]`），无需修改；如需自定义可设置环境变量 `TELEIMAGER_CONFIG` 指向自己的配置文件。
+
+Ubuntu 22.04 自带的 libjpeg-turbo 是 2.x，若 `python -c "from turbojpeg import TurboJPEG; TurboJPEG()"` 报错，请执行 `pip install "PyTurboJPEG<2"`（`auto_setup_env.sh` 会自动处理）。
 
 WebRTC（https）图像页面使用的证书：
 
 ```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
-mkdir -p ~/.config/xr_teleoperate/
-mv key.pem cert.pem ~/.config/xr_teleoperate/
+mkdir -p ~/.config/teleimager/
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -subj "/CN=unitree-sim" \
+    -keyout ~/.config/teleimager/key.pem -out ~/.config/teleimager/cert.pem
 ```
 
 ### 9. 资源下载
@@ -133,3 +136,21 @@ sudo sysctl -w net.ipv4.ip_local_reserved_ports=55555-55557,60001-60003
 **4. Isaac Sim 5.1 及更早版本**
 
 Isaac Sim 4.5 / 5.0 / 5.1请切换到IsaacSim5.1.0分支。
+
+**5. `No module named 'teleimager'` / `teleimager/` 目录为空**
+
+图像服务是 git 子模块，需要拉取并安装：
+
+```bash
+git submodule update --init --recursive
+pip install -e "./teleimager[server]"
+```
+
+**6. `Failed to initialize TurboJPEG` / `libjpeg-turbo 3.0+ is required`**
+
+Ubuntu 22.04 自带的 libjpeg-turbo 是 2.x，请安装系统库和对应版本的绑定：
+
+```bash
+sudo apt install libturbojpeg
+pip install "PyTurboJPEG<2"
+```

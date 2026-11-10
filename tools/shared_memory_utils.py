@@ -150,14 +150,16 @@ class MultiImageWriter:
                     print(f"[MultiImageWriter] Not enough space for {image_name}: need {total_size}, available {shm.size}")
                     continue
 
-                # 写入头部
-                header_bytes = ctypes.string_at(ctypes.byref(header), header_size)
-                shm.buf[0:header_size] = header_bytes
-
-                # 写入数据
+                # Seqlock-style update so a reader never takes a half-written frame: mark the block as being
+                # written (timestamp 0), write the data, then the complete header (non-zero timestamp last).
+                # Readers skip timestamp 0 and re-check the timestamp after copying the data.
+                shm.buf[0:8] = b"\x00" * 8  # header.timestamp (first field, uint64)
                 data_start = header_size
                 data_end = data_start + header.data_size
                 shm.buf[data_start:data_end] = data_bytes
+                header_bytes = ctypes.string_at(ctypes.byref(header), header_size)
+                shm.buf[8:header_size] = header_bytes[8:]
+                shm.buf[0:8] = header_bytes[0:8]
 
                 success_count += 1
 

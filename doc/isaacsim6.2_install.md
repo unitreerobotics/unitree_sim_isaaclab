@@ -6,9 +6,9 @@ Requirements: Ubuntu 22.04 or newer (GLIBC ≥ 2.35), NVIDIA driver ≥ 580.65.0
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/unitreerobotics/unitree_sim_isaaclab.git
+git clone --recurse-submodules https://github.com/unitreerobotics/unitree_sim_isaaclab.git
 cd unitree_sim_isaaclab
-sudo apt install cmake build-essential openssl git-lfs unzip
+sudo apt install cmake build-essential openssl git-lfs unzip libturbojpeg
 ```
 
 ### 2. Create the conda environment
@@ -83,17 +83,20 @@ pip install -e .
 ```bash
 cd ../unitree_sim_isaaclab
 pip install -r requirements.txt
-cd teleimager && pip install -e . && cd ..
+git submodule update --init teleimager   # image server (submodule, branch sim)
+pip install -e "./teleimager[server]"
 ```
 
-The image server config `teleimager/cam_config_server.yaml` is already set up for the simulator (`type: isaacsim`, stereo head camera `image_shape: [480, 1280]`).
+The simulator camera config of the image server is bundled with the teleimager package (`teleimager/src/teleimager/teleimager_server_isaacsim.yaml`: `type: isaacsim`, stereo head camera `image_shape: [480, 1280]`). To use your own, point the environment variable `TELEIMAGER_CONFIG` to it.
+
+Ubuntu 22.04 ships libjpeg-turbo 2.x; if `python -c "from turbojpeg import TurboJPEG; TurboJPEG()"` fails, run `pip install "PyTurboJPEG<2"` (`auto_setup_env.sh` does this automatically).
 
 Certificates for the WebRTC (https) image pages:
 
 ```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
-mkdir -p ~/.config/xr_teleoperate/
-mv key.pem cert.pem ~/.config/xr_teleoperate/
+mkdir -p ~/.config/teleimager/
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -subj "/CN=unitree-sim" \
+    -keyout ~/.config/teleimager/key.pem -out ~/.config/teleimager/cert.pem
 ```
 
 ### 9. Assets
@@ -133,3 +136,21 @@ sudo sysctl -w net.ipv4.ip_local_reserved_ports=55555-55557,60001-60003
 **4. Isaac Sim 5.1 or older**
 
 Isaac Sim 4.5 / 5.0 / 5.1: Please switch to the IsaacSim5.1.0 branch.
+
+**5. `No module named 'teleimager'` / the `teleimager/` folder is empty**
+
+The image server is a git submodule. Fetch and install it:
+
+```bash
+git submodule update --init --recursive
+pip install -e "./teleimager[server]"
+```
+
+**6. `Failed to initialize TurboJPEG` / `libjpeg-turbo 3.0+ is required`**
+
+Ubuntu 22.04 ships libjpeg-turbo 2.x. Install the system library and the matching binding:
+
+```bash
+sudo apt install libturbojpeg
+pip install "PyTurboJPEG<2"
+```

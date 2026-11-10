@@ -32,7 +32,7 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.aliyun.com/ubuntu
 # 构建依赖（GCC 12 + GLU + Vulkan）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-12 g++-12 cmake build-essential git git-lfs unzip wget ca-certificates openssl \
-    libglu1-mesa-dev libvulkan1 vulkan-tools \
+    libglu1-mesa-dev libvulkan1 vulkan-tools libturbojpeg \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 \
     && rm -rf /var/lib/apt/lists/*
@@ -83,17 +83,19 @@ ENV CYCLONEDDS_HOME=/cyclonedds/install
 RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python && \
     cd unitree_sdk2_python && pip install -e .
 
-# unitree_sim_isaaclab（当前目录的源码，teleimager 为源码目录；assets 见 .dockerignore）
+# unitree_sim_isaaclab（当前目录的源码；teleimager 子模块需在构建前执行 git submodule update --init；assets 见 .dockerignore）
 COPY . /home/code/unitree_sim_isaaclab
 RUN cd /home/code/unitree_sim_isaaclab && \
+    test -f teleimager/pyproject.toml || (echo "teleimager submodule missing: git submodule update --init teleimager" && false) && \
     pip install -r requirements.txt && \
-    cd teleimager && pip install -e . && \
+    pip install -e "./teleimager[server]" && \
+    (python -c "from turbojpeg import TurboJPEG; TurboJPEG()" || pip install "PyTurboJPEG<2") && \
     pip cache purge
 
 # 图像服务（WebRTC / https）使用的自签名证书
-RUN mkdir -p /root/.config/xr_teleoperate && \
+RUN mkdir -p /root/.config/teleimager && \
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -subj "/CN=unitree-sim" \
-        -keyout /root/.config/xr_teleoperate/key.pem -out /root/.config/xr_teleoperate/cert.pem
+        -keyout /root/.config/teleimager/key.pem -out /root/.config/teleimager/cert.pem
 
 
 # ==============================
@@ -112,14 +114,14 @@ ENV CYCLONEDDS_HOME=/cyclonedds/install
 
 # 运行时依赖（Isaac Sim 渲染 / 窗口所需的 X11、GL、Vulkan 库）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglu1-mesa libgl1 libegl1 libvulkan1 libxt6 libxrandr2 libxi6 libxkbcommon0 libsm6 libice6 \
+    libglu1-mesa libgl1 libegl1 libvulkan1 libxt6 libxrandr2 libxi6 libxkbcommon0 libsm6 libice6 libturbojpeg \
     git git-lfs zenity unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/conda /opt/conda
 COPY --from=builder /cyclonedds /cyclonedds
 COPY --from=builder /home/code /home/code
-COPY --from=builder /root/.config/xr_teleoperate /root/.config/xr_teleoperate
+COPY --from=builder /root/.config/teleimager /root/.config/teleimager
 
 RUN echo 'source /opt/conda/etc/profile.d/conda.sh' >> ~/.bashrc && \
     echo 'conda activate unitree_sim_env' >> ~/.bashrc

@@ -1,5 +1,5 @@
 rerun-sdk==0.23.4
-logging_mp==0.1.5
+logging_mp>=0.2.2
 onnxruntime==1.22.1
 onnx
 pynput==1.8.1

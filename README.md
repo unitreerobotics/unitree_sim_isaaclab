@@ -121,6 +121,27 @@ Task names (`--task`) and the matching arguments:
 | Python | 3.12 |
 | PyTorch | 2.11.0 / torchvision 0.26.0 (CUDA 13.0, `cu130`) |
 | CycloneDDS | `releases/0.10.x` |
+| teleimager (image server) | git submodule `teleimager/`, branch `sim` |
+
+### 2.0 Get the code
+
+The image server [teleimager](https://github.com/unitreerobotics/teleimager) is a git submodule, so clone with `--recurse-submodules`:
+
+```bash
+git clone --recurse-submodules https://github.com/unitreerobotics/unitree_sim_isaaclab.git
+# already cloned without it:
+cd unitree_sim_isaaclab && git submodule update --init --recursive
+```
+
+After pulling a newer version of this repository, also update the submodule (and reinstall it if its dependencies changed):
+
+```bash
+git pull
+git submodule update --init --recursive
+pip install -e "./teleimager[server]"
+```
+
+To follow the latest commit of teleimager's `sim` branch instead of the pinned one: `git submodule update --remote teleimager`.
 
 ### 2.1 Automatic installation (recommended)
 
@@ -130,7 +151,7 @@ bash auto_setup_env.sh unitree_sim_env          # optional 2nd argument: PyTorch
 conda activate unitree_sim_env
 ```
 
-The script clones `IsaacLab` (v3.0.0), `cyclonedds` and `unitree_sdk2_python` next to this repository, creates the conda environment, installs everything listed below, generates the image server certificates and downloads the assets.
+The script initializes the `teleimager` submodule, clones `IsaacLab` (v3.0.0), `cyclonedds` and `unitree_sdk2_python` next to this repository, creates the conda environment, installs everything listed below (including `teleimager[server]`), generates the image server certificates and downloads the assets.
 
 ### 2.2 Manual installation
 
@@ -140,6 +161,7 @@ See <a href="doc/isaacsim6.2_install.md">Isaac Sim 6.2.0 / Isaac Lab 3.0.0 insta
 
 ```bash
 cd unitree_sim_isaaclab
+git submodule update --init --recursive                # the image is built from this checkout, incl. teleimager
 bash fetch_assets.sh                                   # assets are mounted, not built into the image
 sudo docker build -t unitree-sim:latest -f Dockerfile .
 # behind a proxy: --build-arg http_proxy=http://127.0.0.1:7890 --build-arg https_proxy=http://127.0.0.1:7890
@@ -216,7 +238,7 @@ The R1-D speed gear can be set with the environment variable `UNITREE_R1D_GEAR=l
 
 ### 2.6 Cameras and image server
 
-The simulator publishes its camera images through the built-in image server (`teleimager/`, config `teleimager/cam_config_server.yaml`), the same interface as the real robot's image server, so [xr_teleoperate](https://github.com/unitreerobotics/xr_teleoperate) can connect directly (set the image server IP in xr_teleoperate to the machine running the simulation).
+The simulator publishes its camera images through the image server [teleimager](https://github.com/unitreerobotics/teleimager) (git submodule `teleimager/`, branch `sim`; simulator config `teleimager_server_isaacsim.yaml` bundled in the package, override with `$TELEIMAGER_CONFIG`), the same interface as the real robot's image server, so [xr_teleoperate](https://github.com/unitreerobotics/xr_teleoperate) can connect directly (set the image server IP in xr_teleoperate to the machine running the simulation).
 
 | Camera | ZMQ | WebRTC (https) |
 |---|---|---|
@@ -227,7 +249,7 @@ The simulator publishes its camera images through the built-in image server (`te
 - The head is a stereo camera. Intrinsics, distortion, stereo extrinsics and the wrist hand-eye poses are read from the calibration file (`--camera_calib`, format of `robots/uniclib_calibration.json`). Values that are missing or don't belong to the simulated robot fall back to the camera mounts of the robot's URDF / USD.
 - The image server stops at startup with an error if one of its ports is already in use. Ports in the ephemeral range can be taken by other programs; reserve them with
   `sudo sysctl -w net.ipv4.ip_local_reserved_ports=55555-55557,60001-60003` (add it to `/etc/sysctl.conf` to keep it).
-- The WebRTC pages use the self-signed certificate in `~/.config/xr_teleoperate/` (created by `auto_setup_env.sh`); accept it in the browser the first time.
+- The WebRTC pages use the self-signed certificate in `~/.config/teleimager/` (created by `auto_setup_env.sh`; if missing, the one in `~/.config/xr_teleoperate/` is used); accept it in the browser the first time.
 
 ### 2.7 Keyboard test scripts
 
@@ -306,7 +328,7 @@ unitree_sim_isaaclab/
 │   ├── g1d_tasks            [G1-D tasks]
 │   ├── r1d_tasks            [R1-D tasks]
 │   └── utils
-├── teleimager               [image server (ZMQ + WebRTC), same interface as on the real robot]
+├── teleimager               [image server (ZMQ + WebRTC), git submodule, branch sim]
 ├── tools                    [keyboard test scripts, arm IK, data conversion, USD tools]
 ├── auto_setup_env.sh        [environment setup]
 ├── fetch_assets.sh          [asset download]

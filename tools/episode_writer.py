@@ -8,7 +8,7 @@ from .rerun_visualizer import RerunLogger
 from queue import Queue, Empty
 from threading import Thread
 import logging_mp
-logger_mp = logging_mp.get_logger(__name__)
+logger_mp = logging_mp.getLogger(__name__)  # logging_mp >= 0.2
 
 class EpisodeWriter():
     def __init__(self, task_dir, frequency=30, image_size=[640, 480], rerun_log = True):

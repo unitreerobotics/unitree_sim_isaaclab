@@ -122,6 +122,27 @@
 | Python | 3.12 |
 | PyTorch | 2.11.0 / torchvision 0.26.0（CUDA 13.0，`cu130`） |
 | CycloneDDS | `releases/0.10.x` |
+| teleimager（图像服务） | git 子模块 `teleimager/`，`sim` 分支 |
+
+### 2.0 获取代码
+
+图像服务 [teleimager](https://github.com/unitreerobotics/teleimager) 是 git 子模块，克隆时请带上 `--recurse-submodules`：
+
+```bash
+git clone --recurse-submodules https://github.com/unitreerobotics/unitree_sim_isaaclab.git
+# 已经克隆但没有带子模块：
+cd unitree_sim_isaaclab && git submodule update --init --recursive
+```
+
+拉取本仓库新版本后，子模块也要同步更新（依赖有变化时重新安装）：
+
+```bash
+git pull
+git submodule update --init --recursive
+pip install -e "./teleimager[server]"
+```
+
+如需使用 teleimager `sim` 分支的最新提交（而不是本仓库锁定的版本）：`git submodule update --remote teleimager`。
 
 ### 2.1 自动安装（推荐）
 
@@ -131,7 +152,7 @@ bash auto_setup_env.sh unitree_sim_env          # 第二个参数可选：PyTorc
 conda activate unitree_sim_env
 ```
 
-脚本会在本仓库同级目录克隆 `IsaacLab`（v3.0.0）、`cyclonedds`、`unitree_sdk2_python`，创建 conda 环境并安装所有依赖，生成图像服务证书并下载资源。
+脚本会初始化 `teleimager` 子模块，在本仓库同级目录克隆 `IsaacLab`（v3.0.0）、`cyclonedds`、`unitree_sdk2_python`，创建 conda 环境并安装所有依赖（包括 `teleimager[server]`），生成图像服务证书并下载资源。
 
 ### 2.2 手动安装
 
@@ -141,6 +162,7 @@ conda activate unitree_sim_env
 
 ```bash
 cd unitree_sim_isaaclab
+git submodule update --init --recursive                # 镜像从当前目录构建，包括 teleimager 子模块
 bash fetch_assets.sh                                   # 资源运行时挂载，不打包进镜像
 sudo docker build -t unitree-sim:latest -f Dockerfile .
 # 需要代理时: --build-arg http_proxy=http://127.0.0.1:7890 --build-arg https_proxy=http://127.0.0.1:7890
@@ -217,7 +239,7 @@ R1-D 的速度档位可通过环境变量 `UNITREE_R1D_GEAR=low|mid|high` 设置
 
 ### 2.6 相机与图像服务
 
-仿真的相机图像通过内置的图像服务（`teleimager/`，配置文件 `teleimager/cam_config_server.yaml`）发布，接口与真机图像服务一致，[xr_teleoperate](https://github.com/unitreerobotics/xr_teleoperate) 可直接连接（把 xr_teleoperate 中图像服务的 IP 改成运行仿真的机器 IP）。
+仿真的相机图像通过图像服务 [teleimager](https://github.com/unitreerobotics/teleimager)（git 子模块 `teleimager/`，`sim` 分支；仿真配置 `teleimager_server_isaacsim.yaml` 随包提供，可用 `$TELEIMAGER_CONFIG` 覆盖）发布，接口与真机图像服务一致，[xr_teleoperate](https://github.com/unitreerobotics/xr_teleoperate) 可直接连接（把 xr_teleoperate 中图像服务的 IP 改成运行仿真的机器 IP）。
 
 | 相机 | ZMQ | WebRTC（https） |
 |---|---|---|
@@ -228,7 +250,7 @@ R1-D 的速度档位可通过环境变量 `UNITREE_R1D_GEAR=low|mid|high` 设置
 - 头部为双目相机。内参、畸变、双目外参以及腕部手眼位姿从标定文件读取（`--camera_calib`，格式同 `robots/uniclib_calibration.json`）。标定文件中缺少的、或与仿真机器人不匹配的参数，会使用机器人 URDF / USD 中的相机安装位置。
 - 如果图像服务的端口已被占用，启动时会直接报错退出。这些端口位于临时端口范围，可能被其他程序占用，可以预留：
   `sudo sysctl -w net.ipv4.ip_local_reserved_ports=55555-55557,60001-60003`（写入 `/etc/sysctl.conf` 可永久生效）。
-- WebRTC 页面使用 `~/.config/xr_teleoperate/` 中的自签名证书（`auto_setup_env.sh` 会生成），首次访问需要在浏览器中信任该证书。
+- WebRTC 页面使用 `~/.config/teleimager/` 中的自签名证书（`auto_setup_env.sh` 会生成；不存在时使用 `~/.config/xr_teleoperate/` 中的证书），首次访问需要在浏览器中信任该证书。
 
 ### 2.7 键盘测试脚本
 
@@ -307,7 +329,7 @@ unitree_sim_isaaclab/
 │   ├── g1d_tasks            [G1-D 任务]
 │   ├── r1d_tasks            [R1-D 任务]
 │   └── utils
-├── teleimager               [图像服务（ZMQ + WebRTC），与真机接口一致]
+├── teleimager               [图像服务（ZMQ + WebRTC），git 子模块，sim 分支]
 ├── tools                    [键盘测试脚本、手臂逆解、数据转换、USD 工具]
 ├── auto_setup_env.sh        [环境安装脚本]
 ├── fetch_assets.sh          [资源下载脚本]

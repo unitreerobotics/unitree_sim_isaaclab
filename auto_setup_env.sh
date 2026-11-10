@@ -18,8 +18,14 @@ ISAAC_LAB_TAG="v3.0.0"
 CYCLONEDDS_BRANCH="releases/0.10.x"
 
 # 0. Directory safety check
-if [ ! -d "teleimager" ] || [ ! -f "requirements.txt" ] || [ ! -f "sim_main.py" ]; then
+if [ ! -f "requirements.txt" ] || [ ! -f "sim_main.py" ]; then
     echo "Error: Please place and run this script from the root of the unitree_sim_isaaclab project!"
+    exit 1
+fi
+# teleimager (image server) is a git submodule (branch sim)
+git submodule update --init --recursive teleimager
+if [ ! -f "teleimager/pyproject.toml" ]; then
+    echo "Error: the teleimager submodule is missing. Run: git submodule update --init teleimager"
     exit 1
 fi
 
@@ -51,7 +57,7 @@ if ! command -v conda >/dev/null 2>&1; then
     exit 1
 fi
 
-sudo apt-get update && sudo apt-get install -y cmake build-essential openssl git git-lfs unzip
+sudo apt-get update && sudo apt-get install -y cmake build-essential openssl git git-lfs unzip libturbojpeg
 
 UNITREE_DIR=$(pwd)
 
@@ -83,16 +89,23 @@ cd "$UNITREE_DIR"
 
 echo "**************************************************"
 echo "Generating certificate files for the image server (WebRTC / https)..."
-echo "Just keep pressing the Enter key."
 echo "**************************************************"
-mkdir -p ~/.config/xr_teleoperate/
-if [ -f ~/.config/xr_teleoperate/cert.pem ] && [ -f ~/.config/xr_teleoperate/key.pem ]; then
-    echo "Certificates already exist in ~/.config/xr_teleoperate/, skipping."
+# teleimager 2.x reads ~/.config/teleimager/{cert,key}.pem (it falls back to ~/.config/xr_teleoperate/)
+CERT_DIR=~/.config/teleimager
+mkdir -p "$CERT_DIR"
+if [ -f "$CERT_DIR/cert.pem" ] && [ -f "$CERT_DIR/key.pem" ]; then
+    echo "Certificates already exist in $CERT_DIR, skipping."
+elif [ -f ~/.config/xr_teleoperate/cert.pem ] && [ -f ~/.config/xr_teleoperate/key.pem ]; then
+    echo "Copying the existing certificates from ~/.config/xr_teleoperate/ to $CERT_DIR."
+    cp ~/.config/xr_teleoperate/cert.pem ~/.config/xr_teleoperate/key.pem "$CERT_DIR/"
 else
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
-    cp key.pem cert.pem ~/.config/xr_teleoperate/
-    rm key.pem cert.pem
+    TMP_CERT=$(mktemp -d)
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -subj "/CN=unitree-sim" \
+        -keyout "$TMP_CERT/key.pem" -out "$TMP_CERT/cert.pem"
+    cp "$TMP_CERT/key.pem" "$TMP_CERT/cert.pem" "$CERT_DIR/"
+    rm -rf "$TMP_CERT"
 fi
+chmod 600 "$CERT_DIR/key.pem"
 
 echo "**************************************************"
 echo "Downloading scene / robot assets..."
@@ -163,11 +176,12 @@ echo "Installing remaining requirements and teleimager..."
 echo "**************************************************"
 cd "$UNITREE_DIR"
 pip install -r requirements.txt
-# image server: camera frames come from the simulator (shared memory)
-sed -i 's/type:.*/type: isaacsim/' teleimager/cam_config_server.yaml
-cd teleimager
-pip install -e .
-cd ..
+# image server; its simulator camera config (teleimager_server_isaacsim.yaml) is bundled in the package
+pip install -e "./teleimager[server]"
+# Ubuntu 22.04 ships libjpeg-turbo 2.x; PyTurboJPEG 2.x needs libjpeg-turbo 3
+if ! python -c "from turbojpeg import TurboJPEG; TurboJPEG()" >/dev/null 2>&1; then
+    pip install "PyTurboJPEG<2"
+fi
 
 echo "**************************************************"
 echo "Checking the environment..."
