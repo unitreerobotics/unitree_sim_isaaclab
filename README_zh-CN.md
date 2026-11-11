@@ -391,20 +391,6 @@ gym.register(
 - 环境配置文件（如 `pickplace_cylinder_g1_29dof_dex1_joint_env_cfg.py`）：导入公共场景、设置机器人位置并添加相机。配置类继承自 `tasks.common_config.env_configs.UnitreeManagerBasedRLEnvCfg`。注意 Isaac Lab 3.0 中四元数的顺序是 **(x, y, z, w)**。
 - 在 `tasks/<robot>_tasks/__init__.py` 中导入新的任务模块。
 
-### 3.3 用自己的 USD 场景一键生成任务
-
-任意 USD 场景（房间、厨房等）都可以一步和机器人组装成仿真任务：
-
-```bash
-python tools/create_usd_task.py --usd /path/to/scene.usda --name Kitchen --robot-pose 1.0,-2.0,0 --check
-python sim_main.py --device cpu --task Isaac-Kitchen-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
-```
-
-- USD 及其引用的所有文件会拷贝到 `assets/scenes/<name>/`，场景按原样仿真（自带的刚体、门、灯光）。单位和朝上轴会自动转换，场景没有地面 / 灯光时才会补上。
-- 按现有目录结构为每个机器人生成一个任务（`tasks/<robot>_tasks/<name>_<robot>/`），机器人、相机、DDS、键盘 / XR 控制与内置任务相同：`Isaac-<name>-G129-Dex1-Joint`、`...-G129-Dex3-...`、`...-G129-Inspire-...`、`...-G1D-Dex1-...`、`...-R1D-Dex1-...`（用 `--robots` 选择）。
-- **机器人站立位置**：修改 `tasks/common_scene/usd_scene_<name>.py` 中的 `SPEC["robots"]`（`pos` 为场景坐标 [x, y, z]，`yaw_deg` 朝向，`joint_pos` 如升降柱高度），改完重启 `sim_main.py` 即可。工具运行结束时会打印具体文件和行号。也可以用 `--robot-pose x,y,yaw_deg`，或在 USD 里放一个名为 `RobotBase` 的 prim（位置 + 朝向）；都不给时自动选场景中部附近的一块空地。
-- `--check` 会无头运行每个任务（机器人稳定、无 NaN、机器人没有推动场景里的门 / 抽屉）并渲染预览图 `img/tasks/<task>.jpg`。
-- 重新运行工具时，已手动修改过的文件会保留；加 `--force` 覆盖。
 
 ### 📋 TODO List
 

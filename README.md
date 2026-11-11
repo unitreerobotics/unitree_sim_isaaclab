@@ -390,20 +390,6 @@ gym.register(
 - The environment configuration (e.g. `pickplace_cylinder_g1_29dof_dex1_joint_env_cfg.py`): import the common scene, set the robot pose and add the cameras. Derive it from `tasks.common_config.env_configs.UnitreeManagerBasedRLEnvCfg`. With Isaac Lab 3.0, quaternions are written in **(x, y, z, w)** order.
 - Import the new task module in `tasks/<robot>_tasks/__init__.py`.
 
-### 3.3 Create tasks from your own USD scene
-
-Any USD scene (a room, a kitchen, ...) can be combined with the robots in one step:
-
-```bash
-python tools/create_usd_task.py --usd /path/to/scene.usda --name Kitchen --robot-pose 1.0,-2.0,0 --check
-python sim_main.py --device cpu --task Isaac-Kitchen-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
-```
-
-- The USD and every file it references are copied to `assets/scenes/<name>/`; the scene is simulated as it is (its own rigid bodies, doors, lights). Units / up axis are converted, a ground plane / dome light is added only if the scene has none.
-- One task per robot is generated in the current layout (`tasks/<robot>_tasks/<name>_<robot>/`), with the robot, cameras, DDS and keyboard / XR control of the built-in tasks: `Isaac-<name>-G129-Dex1-Joint`, `...-G129-Dex3-...`, `...-G129-Inspire-...`, `...-G1D-Dex1-...`, `...-R1D-Dex1-...` (`--robots` selects).
-- **Robot standing pose**: edit `tasks/common_scene/usd_scene_<name>.py`, `SPEC["robots"]` (`pos` [x, y, z] in scene coordinates, `yaw_deg`, `joint_pos` e.g. the lift column), then restart `sim_main.py`. The tool prints the exact file and line. Alternatives: `--robot-pose x,y,yaw_deg`, or a prim named `RobotBase` in the USD (position + heading); without either, a free floor spot near the middle of the scene is used.
-- `--check` runs each task headless (robot stable, no NaN, scene doors / drawers not pushed by the robot) and renders `img/tasks/<task>.jpg`.
-- Re-running the tool keeps files you edited; `--force` overwrites them.
 
 ### 📋 TODO List
 
