@@ -6,11 +6,14 @@ G1-D robot state observations (independent of the G1 29dof state functions).
 Joints are looked up by name (``joint_index.JointGather``), so the functions work for the URDF- or
 USD-imported G1-D whatever the joint order is.
 
-DDS: the state is published through the same ``g129`` (rt/lowstate, 29 motors) and ``dex1`` DDS
-objects as the G1, so the existing teleoperation clients work unchanged. Motor slots:
+DDS: the state is published through the same ``g129`` (rt/lowstate) and ``dex1`` DDS objects as the G1, so
+the existing teleoperation clients work unchanged. The observation keeps 29 motor slots; the published
+rt/lowstate has 35 (real G1-D layout, see unirobot ``g1_d_flagship``):
 
-* 12 / 13: waist yaw (torso_Joint) / waist pitch (Yaw_Joint)
+* 12 / 13: waist yaw (torso_Joint) / waist pitch (Yaw_Joint, xr_teleoperate layout)
+* 14     : waist pitch again (real flagship slot; also published alone on rt/waistpitchstate)
 * 15..28 : arms (same joints as G1, same order)
+* 31 / 33: left / right Dex1 gripper motor (unirobot "internal" wiring, q 0 closed .. 5.4 open)
 * others  : not present on the G1-D (no legs), read 0. Lift and base go through g1d_mobile_dds.
 """
 
@@ -57,6 +60,55 @@ def g1_dex1_to_g1d_finger(x):
     c = (x - _G1_DEX1_OPEN) / (_G1_DEX1_CLOSED - _G1_DEX1_OPEN)
     return G1D_DEX1_FINGER_OPEN + c * (G1D_DEX1_FINGER_CLOSED - G1D_DEX1_FINGER_OPEN)
 
+
+# Real G1-D / R1-D (unirobot Dex1 "internal" wiring): the grippers are motors of the body lowcmd / lowstate,
+# slot 31 = left, 33 = right, motor q in [0 closed, DEX1_MOTOR_OPEN open] (unirobot dex1_1 qpos_open 5.4).
+DEX1_LOWCMD_SLOTS = {"left": 31, "right": 33}
+DEX1_MOTOR_OPEN = 5.4
+LOWSTATE_SLOTS = 35  # unitree_hg LowState_ / LowCmd_ motor array
+# Real G1-D flagship waist pitch motor; driven through rt/waistpitchcmd, reported on rt/waistpitchstate
+G1D_WAIST_PITCH_SLOT = 14
+_DEX1_MOTOR_PER_M = DEX1_MOTOR_OPEN / (G1D_DEX1_FINGER_OPEN - G1D_DEX1_FINGER_CLOSED)
+
+
+def dex1_motor_to_g1d_finger(q):
+    """Dex1 motor q [0 closed, 5.4 open] -> G1-D finger travel [0 closed, 0.041 open] (clamped)."""
+    q = min(max(float(q), 0.0), DEX1_MOTOR_OPEN)
+    return G1D_DEX1_FINGER_CLOSED + q / _DEX1_MOTOR_PER_M
+
+
+def dds_lowstate_arrays(env: ManagerBasedRLEnv, pos, vel, torque):
+    """35-slot lowstate (env 0) for DDS: the observation slots plus the Dex1 grippers on motors 31 / 33."""
+    n = pos.shape[1]
+    p, v, t = (torch.zeros(LOWSTATE_SLOTS, device=pos.device, dtype=pos.dtype) for _ in range(3))
+    p[:n], v[:n], t[:n] = pos[0], vel[0], torque[0]
+    _, fp, fv, ft = _gather_states(env, G1D_DEX1_JOINTS, "dex1_lowstate")
+    for i, side in enumerate(("right", "left")):  # G1D_DEX1_JOINTS order
+        s = DEX1_LOWCMD_SLOTS[side]
+        p[s] = (fp[0, i] - G1D_DEX1_FINGER_CLOSED) * _DEX1_MOTOR_PER_M
+        v[s] = fv[0, i] * _DEX1_MOTOR_PER_M
+        t[s] = ft[0, i]
+    return p, v, t
+
+
+_waist_pitch_dds = []
+
+
+def _get_waist_pitch_dds():
+    """The g1d_waist_pitch DDS object (cached once registered; None before that or without DDS)."""
+    if not _waist_pitch_dds:
+        try:
+            from dds.dds_master import dds_manager
+
+            obj = dds_manager.objects.get("g1d_waist_pitch")
+        except Exception:
+            obj = None
+        if obj is None:
+            return None
+        _waist_pitch_dds.append(obj)
+    return _waist_pitch_dds[0]
+
+
 _DDS_MIN_INTERVAL_MS = 20
 _state: dict[str, dict] = {}
 
@@ -91,7 +143,14 @@ def get_robot_g1d_body_joint_states(env: ManagerBasedRLEnv, enable_dds: bool = T
             dds = _get_g1_robot_dds_instance()
             if dds:
                 imu = get_robot_imu_data(env)
-                dds.write_robot_state(pos[0].cpu().numpy(), vel[0].cpu().numpy(), torque[0].cpu().numpy(), imu[0].cpu().numpy())
+                p, v, t = dds_lowstate_arrays(env, pos, vel, torque)
+                # waist pitch also on motor 14 and rt/waistpitchstate like the real G1-D flagship (13 kept for
+                # clients using the xr_teleoperate G1_29_JointWaistIndex layout)
+                p[G1D_WAIST_PITCH_SLOT], v[G1D_WAIST_PITCH_SLOT], t[G1D_WAIST_PITCH_SLOT] = p[13], v[13], t[13]
+                dds.write_robot_state(p.cpu().numpy(), v.cpu().numpy(), t.cpu().numpy(), imu[0].cpu().numpy())
+                pitch_dds = _get_waist_pitch_dds()
+                if pitch_dds:
+                    pitch_dds.write_waist_pitch_state(float(p[13]), float(v[13]), float(t[13]))
         except Exception as e:
             print(f"[g1d_state] Error writing robot state to DDS: {e}")
     return torch.cat([pos, vel, torque], dim=1)

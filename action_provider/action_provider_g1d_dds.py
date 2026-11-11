@@ -5,10 +5,15 @@
 Same DDS interface as the real G1-D (xr_teleoperate ``mobile-teleop``), so the teleoperation client
 drives the simulated robot unchanged:
 
-* rt/lowcmd (``g129`` DDS object): motors 15..28 -> arm joints, motor 12 -> waist yaw (torso_Joint),
-  motor 13 -> waist pitch (Yaw_Joint). Waist commands are only applied once a lowcmd was received.
-* rt/dex1/*/cmd (``dex1``): the DDS object delivers the G1 Dex1 joint range [-0.02 open, 0.024 closed];
-  it is mapped to the G1-D finger travel [0.041 open, 0 closed] and applied to both fingers.
+* rt/lowcmd (``g129`` DDS object): motors 15..28 -> arm joints, motor 12 -> waist yaw (torso_Joint).
+  Waist commands are only applied once a lowcmd was received.
+* Waist pitch (Yaw_Joint): rt/waistpitchcmd (``g1d_waist_pitch``, unitree_hg MotorCmd_.q) like the real G1-D
+  flagship (unirobot ``motor_topics``). Until that topic is received, lowcmd motor 13 (xr_teleoperate layout) is
+  used when it is enabled (mode 1), so a lowcmd that leaves it unused (unirobot) does not move the waist.
+* Dex1 grippers, real "internal" wiring (unirobot G1-D / R1-D): lowcmd motors 31 (left) / 33 (right), motor q in
+  [0 closed, 5.4 open], used when the slot is enabled (mode 1 and kp > 0); they take precedence over
+* rt/dex1/*/cmd (``dex1``, "external" wiring): the DDS object delivers the G1 Dex1 joint range [-0.02 open,
+  0.024 closed]; it is mapped to the G1-D finger travel [0.041 open, 0 closed] and applied to both fingers.
 * rt/cmd_hispeed (``g1d_mobile``): lift speed command z in [-1, 1] is integrated into the lift height
   target (both stages extend equally, 0 .. 0.42 m in total).
 * rt/cmd_vel_no_limit (``g1d_mobile``): linear.x / angular.z set the base velocity (forward along the
@@ -36,7 +41,7 @@ from robots.unitree_g1d import (
     G1D_WAIST_PITCH_JOINT,
     G1D_WAIST_YAW_JOINT,
 )
-from tasks.common_observations.g1d_state import ARM_JOINTS, g1_dex1_to_g1d_finger
+from tasks.common_observations.g1d_state import DEX1_LOWCMD_SLOTS, ARM_JOINTS, dex1_motor_to_g1d_finger, g1_dex1_to_g1d_finger
 
 _ARM_DDS_OFFSET = 15
 
@@ -51,7 +56,10 @@ class G1DDDSActionProvider(ActionProvider):
     class attributes below (joint names / lowcmd slots / lift / mobile DDS object)."""
 
     ROBOT = "G1-D"
-    LOWCMD_EXTRA = {G1D_WAIST_YAW_JOINT: 12, G1D_WAIST_PITCH_JOINT: 13}  # joint -> lowcmd motor (besides the arms)
+    LOWCMD_EXTRA = {G1D_WAIST_YAW_JOINT: 12}  # joint -> lowcmd motor (besides the arms)
+    LOWCMD_GATED = {G1D_WAIST_PITCH_JOINT: 13}  # like LOWCMD_EXTRA, but only applied while the slot is enabled (mode 1)
+    WAIST_PITCH_DDS = "g1d_waist_pitch"  # DDS object with get_waist_pitch_command(); None: no separate pitch topic
+    WAIST_PITCH_JOINT = G1D_WAIST_PITCH_JOINT
     LIFT_JOINTS = G1D_LIFT_JOINTS
     LIFT_STAGE_MAX = G1D_LIFT_STAGE_MAX
     LIFT_MAX_SPEED = G1D_LIFT_MAX_SPEED
@@ -71,6 +79,9 @@ class G1DDDSActionProvider(ActionProvider):
         self.robot_dds = dds_manager.get_object("g129")
         self.gripper_dds = dds_manager.get_object("dex1") if args_cli.enable_dex1_dds else None
         self.mobile_dds = dds_manager.get_object(self.MOBILE_DDS) if self.MOBILE_DDS else None
+        self.pitch_dds = dds_manager.get_object(self.WAIST_PITCH_DDS) if self.WAIST_PITCH_DDS else None
+        self._pitch_topic_seen = False
+        self._start_time = time.time()  # ignore commands left in the (named) shared memory by an earlier run
         if args_cli.enable_dex3_dds or args_cli.enable_inspire_dds:
             print(f"[{self.name}] {self.ROBOT} has Dex1 grippers; --enable_dex3_dds / --enable_inspire_dds are ignored")
 
@@ -80,6 +91,8 @@ class G1DDDSActionProvider(ActionProvider):
         self._arm_target = torch.tensor([idx[n] for n in ARM_JOINTS], dtype=torch.long, device=device)
         self._arm_source = torch.arange(_ARM_DDS_OFFSET, _ARM_DDS_OFFSET + len(ARM_JOINTS), device=device)
         self._waist = {idx[j]: slot for j, slot in self.LOWCMD_EXTRA.items()}
+        self._waist_gated = {idx[j]: slot for j, slot in self.LOWCMD_GATED.items()}
+        self._pitch_id = idx[self.WAIST_PITCH_JOINT] if self.pitch_dds else None
         self._lift_ids = [idx[j] for j in self.LIFT_JOINTS]
         self._fingers = {
             side: torch.tensor([idx[f"{side}_dex1_finger_joint_1"], idx[f"{side}_dex1_finger_joint_2"]], dtype=torch.long, device=device)
@@ -93,7 +106,8 @@ class G1DDDSActionProvider(ActionProvider):
         self._env_ids = torch.tensor([0], device=device)
         self._last_episode_step = None
         print(
-            f"[{self.name}] DDS initialized: arms + waist{' + dex1 gripper' if self.gripper_dds else ''}"
+            f"[{self.name}] DDS initialized: arms + waist + dex1 gripper (lowcmd 31/33){' + rt/dex1' if self.gripper_dds else ''}"
+            f"{' + rt/waistpitchcmd' if self.pitch_dds else ''}"
             f"{' + mobile base / lift' if self.mobile_dds else ' (base / lift held: ' + (f'no {self.MOBILE_DDS} DDS object' if self.MOBILE_DDS else 'no mobile DDS interface yet') + ')'}"
         )
 
@@ -206,23 +220,44 @@ class G1DDDSActionProvider(ActionProvider):
                 self._reset_targets()  # first call or the environment was reset
             self._last_episode_step = step
 
+            internal_grippers = {}  # side -> Dex1 motor q from lowcmd motors 31 / 33
             if self.robot_dds:
                 cmd = self.robot_dds.get_robot_command()
                 if cmd and "motor_cmd" in cmd:
-                    positions = cmd["motor_cmd"]["positions"]
-                    n = max([_ARM_DDS_OFFSET + len(ARM_JOINTS)] + [slot + 1 for slot in self._waist.values()])
+                    mc = cmd["motor_cmd"]
+                    positions = mc["positions"]
+                    modes = mc.get("modes") or [1] * len(positions)
+                    kps = mc.get("kp") or [0.0] * len(positions)
+                    slots = list(self._waist.values()) + list(self._waist_gated.values())
+                    n = max([_ARM_DDS_OFFSET + len(ARM_JOINTS)] + [slot + 1 for slot in slots])
                     if len(positions) >= n:
                         q = torch.tensor(positions[:n], dtype=torch.float32, device=self._device)
                         self._targets.index_copy_(0, self._arm_target, q.index_select(0, self._arm_source))
                         for j, slot in self._waist.items():
                             self._targets[j] = q[slot]
+                        if not self._pitch_topic_seen:
+                            for j, slot in self._waist_gated.items():
+                                if modes[slot] == 1:
+                                    self._targets[j] = q[slot]
+                    for side, slot in DEX1_LOWCMD_SLOTS.items():
+                        if slot < len(positions) and modes[slot] == 1 and kps[slot] > 0.0:
+                            internal_grippers[side] = positions[slot]
+            if self.pitch_dds:
+                cmd = self.pitch_dds.get_waist_pitch_command()
+                if cmd and "q" in cmd and float(cmd.get("stamp", 0.0)) >= self._start_time:
+                    if not self._pitch_topic_seen:
+                        print(f"[{self.name}] waist pitch commanded through rt/waistpitchcmd (lowcmd motor 13 ignored)")
+                    self._pitch_topic_seen = True
+                    self._targets[self._pitch_id] = float(cmd["q"])
             if self.gripper_dds:
                 cmd = self.gripper_dds.get_gripper_command()
                 if cmd:
                     for side in ("left", "right"):
                         p = cmd.get(f"{side}_gripper_cmd", {}).get("positions", [])
-                        if p:
+                        if p and side not in internal_grippers:
                             self._targets[self._fingers[side]] = float(g1_dex1_to_g1d_finger(float(p[0])))
+            for side, q_motor in internal_grippers.items():
+                self._targets[self._fingers[side]] = dex1_motor_to_g1d_finger(q_motor)
             # without a mobile DDS object the base is still held in place and the lift at its target
             cmd, now = (self.mobile_dds.get_mobile_command() if self.mobile_dds else None), time.time()
             self._apply_lift(cmd, now)
@@ -236,7 +271,7 @@ class G1DDDSActionProvider(ActionProvider):
 
     def cleanup(self):
         try:
-            for dds in (self.robot_dds, self.gripper_dds, self.mobile_dds):
+            for dds in (self.robot_dds, self.gripper_dds, self.mobile_dds, self.pitch_dds):
                 if dds:
                     dds.stop_communication()
         except Exception as e:

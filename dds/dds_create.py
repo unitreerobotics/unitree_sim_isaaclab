@@ -43,6 +43,11 @@ def create_dds_objects(args_cli,env):
         dds_manager.register_object("g1d_mobile", g1d_mobile)
         publish_names.append("g1d_mobile")
         subscribe_names.append("g1d_mobile")
+        # G1-D waist pitch on its own topics like the real flagship (rt/waistpitchcmd -> rt/waistpitchstate)
+        from dds.g1d_waist_pitch_dds import G1DWaistPitchDDS
+        dds_manager.register_object("g1d_waist_pitch", G1DWaistPitchDDS())
+        publish_names.append("g1d_waist_pitch")
+        subscribe_names.append("g1d_waist_pitch")
     if args_cli.robot_type == "r1d":
         # R1-D base + lift column (rt/cmd_vel, rt/state_vel, rt/height_state, rt/height_alarm @ 50 Hz)
         from dds.r1d_mobile_dds import R1DMobileDDS

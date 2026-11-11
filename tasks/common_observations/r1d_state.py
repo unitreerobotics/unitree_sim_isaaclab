@@ -11,6 +11,7 @@ DDS objects as the G1 / G1-D. lowstate motor slots (xr_teleoperate R1_A7_JointIn
 * 13      : waist yaw
 * 15..28  : arms (same joint names / order as the G1)
 * 29 / 30 : head pitch / head yaw
+* 31 / 33 : left / right Dex1 gripper motor (DDS only; unirobot "internal" wiring, q 0 closed .. 5.4 open)
 * others  : not present on the R1-D (read 0)
 
 The Dex1 grippers have the same joints / travel as on the G1-D, so the G1-D gripper state function is reused.
@@ -25,7 +26,7 @@ import torch
 from robots.unitree_r1d import R1D_COLUMN_RADIUS, R1D_HEAD_PITCH_JOINT, R1D_HEAD_YAW_JOINT, R1D_LIFT_JOINTS, R1D_WAIST_YAW_JOINT
 from tasks.common_observations.joint_index import JointGather
 from tasks.common_observations.g1_29dof_state import _get_g1_robot_dds_instance, get_robot_imu_data
-from tasks.common_observations.g1d_state import ARM_JOINTS, _dds_due, _gather_states
+from tasks.common_observations.g1d_state import ARM_JOINTS, _dds_due, _gather_states, dds_lowstate_arrays
 from tasks.common_observations.g1d_state import get_robot_g1d_dex1_joint_states as get_robot_r1d_dex1_joint_states  # noqa: F401
 
 if TYPE_CHECKING:
@@ -53,7 +54,8 @@ def get_robot_r1d_body_joint_states(env: ManagerBasedRLEnv, enable_dds: bool = T
             dds = _get_g1_robot_dds_instance()
             if dds:
                 imu = get_robot_imu_data(env)
-                dds.write_robot_state(pos[0].cpu().numpy(), vel[0].cpu().numpy(), torque[0].cpu().numpy(), imu[0].cpu().numpy())
+                p, v, t = dds_lowstate_arrays(env, pos, vel, torque)  # + Dex1 grippers on motors 31 / 33
+                dds.write_robot_state(p.cpu().numpy(), v.cpu().numpy(), t.cpu().numpy(), imu[0].cpu().numpy())
         except Exception as e:
             print(f"[r1d_state] Error writing robot state to DDS: {e}")
     return torch.cat([pos, vel, torque], dim=1)

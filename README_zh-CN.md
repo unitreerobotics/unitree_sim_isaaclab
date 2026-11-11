@@ -186,12 +186,16 @@ python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint 
 
 ### 2.4 资源下载
 
-资源通过以下命令下载（`auto_setup_env.sh` 已包含此步骤；资源包包含场景、G1 / H1-2 的 USD 以及 G1-D / R1-D 的 URDF）：
+资源按文件从 HuggingFace 数据集 [unitreerobotics/unitree_sim_isaaclab_usds](https://huggingface.co/datasets/unitreerobotics/unitree_sim_isaaclab_usds) 的 `assets/` 目录下载到 `./assets`（`auto_setup_env.sh` 已包含此步骤；包含场景、G1 / H1-2 的 USD 以及 G1-D / R1-D 的 URDF）：
 
 ```bash
-sudo apt install git-lfs
-bash fetch_assets.sh
+bash fetch_assets.sh                                   # 全部资源
+bash fetch_assets.sh robots/g1-29dof-dex1-base-fix-usd urdf   # 只下载指定目录（assets/ 下的路径）
 ```
+
+重复运行只会下载缺失或有更新的文件，本地多出的文件（如 `assets/robots/.urdf_cache`、自己导入的场景）会保留。可用 `HF_ENDPOINT=https://hf-mirror.com` 走镜像。
+
+上传（需要对 `unitreerobotics` 组织有写权限的 token；只传新增/修改的文件，本地缓存不上传）：`HF_TOKEN=hf_xxx bash upload_assets.sh [scenes/kitchen ...]`。
 
 机器人既可以用 USD 也可以用 URDF 描述（`robots/robot_assets.py`）：URDF 会在第一次使用时转换为 USD 并缓存在 `assets/robots/.urdf_cache/`。G1-D 和 R1-D 分别从
 `assets/urdf/g1_d_description/g1_d_with_dex1_1.urdf`、`assets/urdf/r1_d_description/r1_d_with_dex1_1.urdf` 加载。
@@ -232,8 +236,10 @@ python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1D-Dex1-Joint -
 | 机器人 | 机身 | 末端执行器 | 底盘 / 升降 |
 |---|---|---|---|
 | G1 / H1-2 | `rt/lowcmd`、`rt/lowstate`（unitree_hg） | `rt/dex1/{left,right}/*`、`rt/dex3/{left,right}/*`、`rt/inspire/*` | `Wholebody`：`rt/run_command/cmd`（见 `send_commands_keyboard.py`、`send_commands_8bit.py`） |
-| G1-D | `rt/lowcmd`、`rt/lowstate`（腰 12/13，手臂 15–28） | `rt/dex1/{left,right}/*` | `rt/cmd_vel_no_limit`、`rt/cmd_hispeed` → `rt/hispeed_state`、`rt/slamware_ros_sdk_server_node/odom` |
-| R1-D | `rt/lowcmd`、`rt/lowstate`（升降柱 12，腰 13，手臂 15–28，头 29/30） | `rt/dex1/{left,right}/*` | `rt/cmd_vel`（归一化）→ `rt/state_vel`、`rt/height_state`、`rt/height_alarm` |
+| G1-D | `rt/lowcmd`、`rt/lowstate`（腰 yaw 12，手臂 15–28；腰 pitch：`rt/waistpitchcmd` → `rt/waistpitchstate`，lowstate 13/14 同时上报，lowcmd 13 启用时也生效） | lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*` | `rt/cmd_vel_no_limit`、`rt/cmd_hispeed` → `rt/hispeed_state`、`rt/slamware_ros_sdk_server_node/odom` |
+| R1-D | `rt/lowcmd`、`rt/lowstate`（升降柱 12，腰 13，手臂 15–28，头 29/30） | lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*` | `rt/cmd_vel`（归一化）→ `rt/state_vel`、`rt/height_state`、`rt/height_alarm` |
+
+G1-D / R1-D 与真机（unirobot）布局一致：Dex1 夹爪是 lowcmd 的 31 / 33 号电机（internal 接线，电机 q 0 闭合 … 5.4 张开；该槽位 mode 为 1 且 kp > 0 时生效，此时优先于 `rt/dex1/*`）；G1-D 腰 pitch 通过 `rt/waistpitchcmd`（unitree_hg `MotorCmd_`）控制。收到 `rt/waistpitchcmd` 之前，lowcmd 13 号只有在 mode 为 1 时才驱动腰 pitch。lowstate 中同时上报两个夹爪电机，以及 13、14 号上的腰 pitch。
 
 R1-D 的速度档位可通过环境变量 `UNITREE_R1D_GEAR=low|mid|high` 设置（默认 `low`）。
 
@@ -384,6 +390,21 @@ gym.register(
 
 - 环境配置文件（如 `pickplace_cylinder_g1_29dof_dex1_joint_env_cfg.py`）：导入公共场景、设置机器人位置并添加相机。配置类继承自 `tasks.common_config.env_configs.UnitreeManagerBasedRLEnvCfg`。注意 Isaac Lab 3.0 中四元数的顺序是 **(x, y, z, w)**。
 - 在 `tasks/<robot>_tasks/__init__.py` 中导入新的任务模块。
+
+### 3.3 用自己的 USD 场景一键生成任务
+
+任意 USD 场景（房间、厨房等）都可以一步和机器人组装成仿真任务：
+
+```bash
+python tools/create_usd_task.py --usd /path/to/scene.usda --name Kitchen --robot-pose 1.0,-2.0,0 --check
+python sim_main.py --device cpu --task Isaac-Kitchen-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
+```
+
+- USD 及其引用的所有文件会拷贝到 `assets/scenes/<name>/`，场景按原样仿真（自带的刚体、门、灯光）。单位和朝上轴会自动转换，场景没有地面 / 灯光时才会补上。
+- 按现有目录结构为每个机器人生成一个任务（`tasks/<robot>_tasks/<name>_<robot>/`），机器人、相机、DDS、键盘 / XR 控制与内置任务相同：`Isaac-<name>-G129-Dex1-Joint`、`...-G129-Dex3-...`、`...-G129-Inspire-...`、`...-G1D-Dex1-...`、`...-R1D-Dex1-...`（用 `--robots` 选择）。
+- **机器人站立位置**：修改 `tasks/common_scene/usd_scene_<name>.py` 中的 `SPEC["robots"]`（`pos` 为场景坐标 [x, y, z]，`yaw_deg` 朝向，`joint_pos` 如升降柱高度），改完重启 `sim_main.py` 即可。工具运行结束时会打印具体文件和行号。也可以用 `--robot-pose x,y,yaw_deg`，或在 USD 里放一个名为 `RobotBase` 的 prim（位置 + 朝向）；都不给时自动选场景中部附近的一块空地。
+- `--check` 会无头运行每个任务（机器人稳定、无 NaN、机器人没有推动场景里的门 / 抽屉）并渲染预览图 `img/tasks/<task>.jpg`。
+- 重新运行工具时，已手动修改过的文件会保留；加 `--force` 覆盖。
 
 ### 📋 TODO List
 

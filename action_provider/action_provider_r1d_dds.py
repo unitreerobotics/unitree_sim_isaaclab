@@ -3,7 +3,8 @@
 """DDS action provider for the Unitree R1-D (same structure as the G1-D provider, R1-D joints / motors).
 
 * rt/lowcmd: motors 15..28 -> arms, 13 -> waist yaw, 29 / 30 -> head pitch / yaw (xr_teleoperate R1_A7_JointIndex)
-* rt/dex1/*/cmd: Dex1 grippers (same mapping as the G1-D)
+* Dex1 grippers: lowcmd motors 31 / 33 (real "internal" wiring, unirobot r1_a7_d) or rt/dex1/*/cmd (same mapping
+  as the G1-D)
 * rt/cmd_vel (``r1d_mobile``, normalized): linear.x / angular.z drive the base, linear.z the column, with
   the twist-module slew limits and the 600 ms command timeout; the column is limited to its 840 mm soft limit.
 """
@@ -27,6 +28,9 @@ from robots.unitree_r1d import (
 class R1DDDSActionProvider(G1DDDSActionProvider):
     ROBOT = "R1-D"
     LOWCMD_EXTRA = {R1D_WAIST_YAW_JOINT: 13, R1D_HEAD_PITCH_JOINT: 29, R1D_HEAD_YAW_JOINT: 30}
+    LOWCMD_GATED = {}
+    WAIST_PITCH_DDS = None  # R1-D has no waist pitch
+    WAIST_PITCH_JOINT = None
     LIFT_JOINTS = R1D_LIFT_JOINTS
     LIFT_STAGE_MAX = R1D_LIFT_STAGE_MAX
     LIFT_MAX_SPEED = R1D_LIFT_MAX_SPEED

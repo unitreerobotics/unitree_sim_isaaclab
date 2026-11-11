@@ -185,12 +185,16 @@ python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint 
 
 ### 2.4 Assets
 
-Assets are downloaded with (also done by `auto_setup_env.sh`; the package contains the scenes, G1 / H1-2 USDs and the G1-D / R1-D URDFs):
+Assets are downloaded file by file from the `assets/` folder of the HuggingFace dataset [unitreerobotics/unitree_sim_isaaclab_usds](https://huggingface.co/datasets/unitreerobotics/unitree_sim_isaaclab_usds) into `./assets` (also done by `auto_setup_env.sh`; scenes, G1 / H1-2 USDs and the G1-D / R1-D URDFs):
 
 ```bash
-sudo apt install git-lfs
-bash fetch_assets.sh
+bash fetch_assets.sh                                   # all assets
+bash fetch_assets.sh robots/g1-29dof-dex1-base-fix-usd urdf   # only these folders (paths below assets/)
 ```
+
+Re-running only fetches missing or updated files; local files that are not in the dataset (e.g. `assets/robots/.urdf_cache`, your own scenes) are kept. Use `HF_ENDPOINT=https://hf-mirror.com` for a mirror.
+
+Upload (token with write access to the `unitreerobotics` organization; only new / modified files are sent, local caches are skipped): `HF_TOKEN=hf_xxx bash upload_assets.sh [scenes/kitchen ...]`.
 
 Robots may be given either as USD or as URDF (`robots/robot_assets.py`): a URDF is converted to USD on first use and cached in `assets/robots/.urdf_cache/`. G1-D and R1-D are loaded from
 `assets/urdf/g1_d_description/g1_d_with_dex1_1.urdf` and `assets/urdf/r1_d_description/r1_d_with_dex1_1.urdf`.
@@ -231,8 +235,10 @@ DDS topics per robot (domain 1):
 | Robot | Body | End effector | Base / lift |
 |---|---|---|---|
 | G1 / H1-2 | `rt/lowcmd`, `rt/lowstate` (unitree_hg) | `rt/dex1/{left,right}/*`, `rt/dex3/{left,right}/*`, `rt/inspire/*` | `Wholebody`: `rt/run_command/cmd` (see `send_commands_keyboard.py`, `send_commands_8bit.py`) |
-| G1-D | `rt/lowcmd`, `rt/lowstate` (waist 12/13, arms 15–28) | `rt/dex1/{left,right}/*` | `rt/cmd_vel_no_limit`, `rt/cmd_hispeed` → `rt/hispeed_state`, `rt/slamware_ros_sdk_server_node/odom` |
-| R1-D | `rt/lowcmd`, `rt/lowstate` (column 12, waist 13, arms 15–28, head 29/30) | `rt/dex1/{left,right}/*` | `rt/cmd_vel` (normalized) → `rt/state_vel`, `rt/height_state`, `rt/height_alarm` |
+| G1-D | `rt/lowcmd`, `rt/lowstate` (waist yaw 12, arms 15–28; waist pitch: `rt/waistpitchcmd` → `rt/waistpitchstate`, also lowstate 13/14, lowcmd 13 when enabled) | lowcmd/lowstate 31 (left) / 33 (right), or `rt/dex1/{left,right}/*` | `rt/cmd_vel_no_limit`, `rt/cmd_hispeed` → `rt/hispeed_state`, `rt/slamware_ros_sdk_server_node/odom` |
+| R1-D | `rt/lowcmd`, `rt/lowstate` (column 12, waist 13, arms 15–28, head 29/30) | lowcmd/lowstate 31 (left) / 33 (right), or `rt/dex1/{left,right}/*` | `rt/cmd_vel` (normalized) → `rt/state_vel`, `rt/height_state`, `rt/height_alarm` |
+
+G1-D / R1-D follow the real robots' unirobot layout: the Dex1 grippers are lowcmd motors 31 / 33 ("internal" wiring, motor q 0 closed … 5.4 open, used when the slot has mode 1 and kp > 0; they then take precedence over `rt/dex1/*`), and the G1-D waist pitch is commanded on `rt/waistpitchcmd` (unitree_hg `MotorCmd_`). Until `rt/waistpitchcmd` is received, lowcmd motor 13 drives the waist pitch only if its mode is 1. The lowstate lists both gripper motors and the waist pitch on 13 and 14.
 
 The R1-D speed gear can be set with the environment variable `UNITREE_R1D_GEAR=low|mid|high` (default `low`).
 
@@ -383,6 +389,21 @@ gym.register(
 
 - The environment configuration (e.g. `pickplace_cylinder_g1_29dof_dex1_joint_env_cfg.py`): import the common scene, set the robot pose and add the cameras. Derive it from `tasks.common_config.env_configs.UnitreeManagerBasedRLEnvCfg`. With Isaac Lab 3.0, quaternions are written in **(x, y, z, w)** order.
 - Import the new task module in `tasks/<robot>_tasks/__init__.py`.
+
+### 3.3 Create tasks from your own USD scene
+
+Any USD scene (a room, a kitchen, ...) can be combined with the robots in one step:
+
+```bash
+python tools/create_usd_task.py --usd /path/to/scene.usda --name Kitchen --robot-pose 1.0,-2.0,0 --check
+python sim_main.py --device cpu --task Isaac-Kitchen-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
+```
+
+- The USD and every file it references are copied to `assets/scenes/<name>/`; the scene is simulated as it is (its own rigid bodies, doors, lights). Units / up axis are converted, a ground plane / dome light is added only if the scene has none.
+- One task per robot is generated in the current layout (`tasks/<robot>_tasks/<name>_<robot>/`), with the robot, cameras, DDS and keyboard / XR control of the built-in tasks: `Isaac-<name>-G129-Dex1-Joint`, `...-G129-Dex3-...`, `...-G129-Inspire-...`, `...-G1D-Dex1-...`, `...-R1D-Dex1-...` (`--robots` selects).
+- **Robot standing pose**: edit `tasks/common_scene/usd_scene_<name>.py`, `SPEC["robots"]` (`pos` [x, y, z] in scene coordinates, `yaw_deg`, `joint_pos` e.g. the lift column), then restart `sim_main.py`. The tool prints the exact file and line. Alternatives: `--robot-pose x,y,yaw_deg`, or a prim named `RobotBase` in the USD (position + heading); without either, a free floor spot near the middle of the scene is used.
+- `--check` runs each task headless (robot stable, no NaN, scene doors / drawers not pushed by the robot) and renders `img/tasks/<task>.jpg`.
+- Re-running the tool keeps files you edited; `--force` overwrites them.
 
 ### 📋 TODO List
 

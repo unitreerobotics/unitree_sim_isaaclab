@@ -140,6 +140,8 @@ class G1RobotDDS(DDSObject):
                 "mode_pr": int(msg.mode_pr),
                 "mode_machine": int(msg.mode_machine),
                 "motor_cmd": {
+                    # per-motor enable (unitree_hg: 1 = enabled); used to tell commanded slots from unused ones
+                    "modes": [int(msg.motor_cmd[i].mode) for i in range(num_cmd_motors)],
                     "positions": [float(msg.motor_cmd[i].q) for i in range(num_cmd_motors)],
                     "velocities": [float(msg.motor_cmd[i].dq) for i in range(num_cmd_motors)],
                     "torques": [float(msg.motor_cmd[i].tau) for i in range(num_cmd_motors)],

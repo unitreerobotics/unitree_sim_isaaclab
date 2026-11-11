@@ -42,7 +42,10 @@ class ObjectTableSceneCfg(TableCylinderSceneCfg):
     
     # Humanoid robot w/ arms higher
     # 5. humanoid robot configuration 
-    robot: ArticulationCfg = G1DRobotPresets.g1_d_dex1()
+    # 0.10 m further back from the table than the preset (y -0.08 -> -0.18; the robot faces +y): in the default
+    # arm pose the gripper fingers reach 0.44 m in front of the base at the cylinder's height, so at -0.08 the
+    # left gripper swept into the cylinder (y 0.40 +- 0.05). Now the finger tips stay ~7 cm short of it.
+    robot: ArticulationCfg = G1DRobotPresets.g1_d_dex1(init_pos=(-0.15, -0.18, 0.1114))
     # 6. add camera configuration 
     # head stereo (left -> image "head", right -> "head_right") + wrist cameras, from the calibration
     front_camera = G1DCameraPresets.head_left_camera()
