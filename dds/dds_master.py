@@ -57,9 +57,15 @@ class DDSManager:
             return True
         
         try:
-            ChannelFactoryInitialize(1)
+            # HANDSIM PATCH 2026-05-26: explicit "lo" interface so cross-process
+            # DDS discovery works on Ubuntu 24.04. Autodetermine picked an
+            # interface that lacked working multicast, so external publishers
+            # (e.g. WBC composer, GR00T-driven goal sender) couldn't reach the
+            # sim's rt/lowstate subscribers. cyclonedds falls back to unicast
+            # on lo and that works fine for local cross-process IPC.
+            ChannelFactoryInitialize(1, "lo")
             self.dds_initialized = True
-            print("[DDSManager] DDS system initialized")
+            print("[DDSManager] DDS system initialized (forced lo interface)")
             return True
         except Exception as e:
             print(f"[DDSManager] DDS system initialization failed: {e}")
