@@ -88,6 +88,7 @@ _dds_initialized = False
 # 观测缓存：索引张量与DDS限速（50FPS）+ 预分配缓冲
 _obs_cache = {
     "device": None,
+    "joint_names": None,
     "batch": None,
     "boy_idx_t": None,
     "boy_idx_batch": None,
@@ -164,8 +165,17 @@ def get_robot_boy_joint_states(
 
     # 预计算并缓存索引张量（列索引）
     global _obs_cache
-    if _obs_cache["device"] != device or _obs_cache["boy_idx_t"] is None:
-        boy_joint_indices = [0, 3, 6, 9, 13, 17, 1, 4, 7, 10, 14, 18, 2, 5, 8, 11, 15, 19, 21, 23, 25, 27, 12, 16, 20, 22, 24, 26, 28]
+    names = tuple(env.scene["robot"].data.joint_names)
+    if (_obs_cache["device"] != device or _obs_cache["boy_idx_t"] is None
+            or _obs_cache["joint_names"] != names):
+        if len(set(names)) != len(names):
+            raise ValueError("Articulation joint names must be unique.")
+        missing = set(get_robot_boy_joint_names()) - set(names)
+        if missing:
+            raise ValueError(f"Missing G1 body joints: {sorted(missing)}")
+        indices = {name: index for index, name in enumerate(names)}
+        boy_joint_indices = [indices[name] for name in get_robot_boy_joint_names()]
+        _obs_cache["joint_names"] = names
         _obs_cache["boy_idx_t"] = torch.tensor(boy_joint_indices, dtype=torch.long, device=device)
         _obs_cache["device"] = device
         _obs_cache["batch"] = None  # force re-init batch-shaped buffers
