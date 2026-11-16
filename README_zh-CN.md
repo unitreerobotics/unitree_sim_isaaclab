@@ -23,10 +23,10 @@
 
 | 机器人 | `--robot_type` | 末端执行器 | 说明 |
 |---|---|---|---|
-| G1 29 自由度 | `g129` | Dex1 夹爪 / Dex3 / Inspire | 固定底座；`Wholebody` 任务可行走 |
-| H1-2 27 自由度 | `h1_2` | Inspire | 固定底座 |
-| G1-D | `g1d` | Dex1 夹爪 | 轮式底盘、升降柱、腰部 |
-| R1-D | `r1d` | Dex1 夹爪 | 轮式底盘、两级升降、腰部、头部 |
+| R1-A7-D | `r1a7d` | Dex1 夹爪 / Dex2-5 | 轮式底盘、两级升降、腰部、头部 |
+| R1-7A | `r17a` | Dex1 夹爪 / Dex2-5 / 灵心 O6（均为单左臂） | 固定底座的 7 轴机械臂，装在桌面或立柱上 |
+| G1-D | `g1d` | Dex1 夹爪 / Dex3 | 轮式底盘、升降柱、腰部 |
+| G1 29 自由度 | `g129` | Dex1 夹爪 / Dex3 | 固定底座；`Wholebody` 任务可行走 |
 
 各机器人的任务场景如下（列为任务，行为机器人，— 表示暂无该任务），名称中带有 `Wholebody` 的任务可以进行移动操作（G1 行走）。
 
@@ -38,6 +38,62 @@
     <th align="center">堆叠<br/>红绿黄方块</th>
     <th align="center">红色方块<br/>放入抽屉</th>
     <th align="center">移动圆柱<br/>（行走）</th>
+  </tr>
+  <tr>
+    <th align="left">R1-A7-D<br/>Dex1</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-R1A7D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-R1A7D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-R1A7D-Dex1-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-R1A7D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex1-Joint.jpg" width="128" alt="Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex1-Joint"/></td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">R1-A7-D<br/>Dex2-5</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R1A7D-Dex2_5-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R1A7D-Dex2_5-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-R1A7D-Dex2_5-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-R1A7D-Dex2_5-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-R1A7D-Dex2_5-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-R1A7D-Dex2_5-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex2_5-Joint.jpg" width="128" alt="Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex2_5-Joint"/></td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">R1-7A<br/>Dex1</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R17A-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R17A-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-R17A-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-R17A-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-R17A-Dex1-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-R17A-Dex1-Joint"/></td>
+    <td align="center">—</td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">R1-7A<br/>Dex2-5</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R17A-Dex2_5-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R17A-Dex2_5-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-R17A-Dex2_5-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-R17A-Dex2_5-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-R17A-Dex2_5-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-R17A-Dex2_5-Joint"/></td>
+    <td align="center">—</td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">R1-7A<br/>O6</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R17A-O6-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R17A-O6-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-R17A-O6-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-R17A-O6-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-R17A-O6-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-R17A-O6-Joint"/></td>
+    <td align="center">—</td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">G1-D<br/>Dex1</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-G1D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-G1D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-G1D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-G1D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-G1D-Dex1-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-G1D-Dex1-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Pick-Redblock-Into-Drawer-G1D-Dex1-Joint.jpg" width="128" alt="Isaac-Pick-Redblock-Into-Drawer-G1D-Dex1-Joint"/></td>
+    <td align="center">—</td>
+  </tr>
+  <tr>
+    <th align="left">G1-D<br/>Dex3</th>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-G1D-Dex3-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-G1D-Dex3-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-G1D-Dex3-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-G1D-Dex3-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-G1D-Dex3-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-G1D-Dex3-Joint"/></td>
+    <td align="center" width="128"><img src="./img/tasks/Isaac-Pick-Redblock-Into-Drawer-G1D-Dex3-Joint.jpg" width="128" alt="Isaac-Pick-Redblock-Into-Drawer-G1D-Dex3-Joint"/></td>
+    <td align="center">—</td>
   </tr>
   <tr>
     <th align="left">G1<br/>Dex1</th>
@@ -55,44 +111,37 @@
     <td align="center" width="128"><img src="./img/tasks/Isaac-Pick-Redblock-Into-Drawer-G129-Dex3-Joint.jpg" width="128" alt="Isaac-Pick-Redblock-Into-Drawer-G129-Dex3-Joint"/></td>
     <td align="center" width="128"><img src="./img/tasks/Isaac-Move-Cylinder-G129-Dex3-Wholebody.jpg" width="128" alt="Isaac-Move-Cylinder-G129-Dex3-Wholebody"/></td>
   </tr>
-  <tr>
-    <th align="left">G1<br/>Inspire</th>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-G129-Inspire-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-G129-Inspire-Joint"/></td>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-G129-Inspire-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-G129-Inspire-Joint"/></td>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-G129-Inspire-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-G129-Inspire-Joint"/></td>
-    <td align="center">—</td>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-Move-Cylinder-G129-Inspire-Wholebody.jpg" width="128" alt="Isaac-Move-Cylinder-G129-Inspire-Wholebody"/></td>
-  </tr>
-  <tr>
-    <th align="left">H1-2<br/>Inspire</th>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint"/></td>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-RedBlock-H12-27dof-Inspire-Joint.jpg" width="128" alt="Isaac-PickPlace-RedBlock-H12-27dof-Inspire-Joint"/></td>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-Stack-RgyBlock-H12-27dof-Inspire-Joint.jpg" width="128" alt="Isaac-Stack-RgyBlock-H12-27dof-Inspire-Joint"/></td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-  </tr>
-  <tr>
-    <th align="left">G1-D<br/>Dex1</th>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-G1D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-G1D-Dex1-Joint"/></td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-  </tr>
-  <tr>
-    <th align="left">R1-D<br/>Dex1</th>
-    <td align="center" width="128"><img src="./img/tasks/Isaac-PickPlace-Cylinder-R1D-Dex1-Joint.jpg" width="128" alt="Isaac-PickPlace-Cylinder-R1D-Dex1-Joint"/></td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-    <td align="center">—</td>
-  </tr>
 </table>
 
 任务名（`--task`）及对应参数：
 
 | 任务名 | 机器人 | `--robot_type` | 手部 DDS 参数 |
 |---|---|---|---|
+| `Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint` | R1-A7-D · Dex1 | `r1a7d` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-RedBlock-R1A7D-Dex1-Joint` | R1-A7-D · Dex1 | `r1a7d` | `--enable_dex1_dds` |
+| `Isaac-Stack-RgyBlock-R1A7D-Dex1-Joint` | R1-A7-D · Dex1 | `r1a7d` | `--enable_dex1_dds` |
+| `Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex1-Joint` | R1-A7-D · Dex1 | `r1a7d` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-Cylinder-R1A7D-Dex2_5-Joint` | R1-A7-D · Dex2-5 | `r1a7d` | —（lowcmd 31–34 号电机） |
+| `Isaac-PickPlace-RedBlock-R1A7D-Dex2_5-Joint` | R1-A7-D · Dex2-5 | `r1a7d` | —（lowcmd 31–34 号电机） |
+| `Isaac-Stack-RgyBlock-R1A7D-Dex2_5-Joint` | R1-A7-D · Dex2-5 | `r1a7d` | —（lowcmd 31–34 号电机） |
+| `Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex2_5-Joint` | R1-A7-D · Dex2-5 | `r1a7d` | —（lowcmd 31–34 号电机） |
+| `Isaac-PickPlace-Cylinder-R17A-Dex1-Joint` | R1-7A · Dex1 | `r17a` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-Cylinder-R17A-Dex2_5-Joint` | R1-7A · Dex2-5 | `r17a` | —（lowcmd 31 / 32 号电机） |
+| `Isaac-PickPlace-Cylinder-R17A-O6-Joint` | R1-7A · 灵心 O6 | `r17a` | `--enable_linkerhand_dds` |
+| `Isaac-PickPlace-RedBlock-R17A-Dex1-Joint` | R1-7A · Dex1 | `r17a` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-RedBlock-R17A-Dex2_5-Joint` | R1-7A · Dex2-5 | `r17a` | —（lowcmd 31 / 32 号电机） |
+| `Isaac-PickPlace-RedBlock-R17A-O6-Joint` | R1-7A · 灵心 O6 | `r17a` | `--enable_linkerhand_dds` |
+| `Isaac-Stack-RgyBlock-R17A-Dex1-Joint` | R1-7A · Dex1 | `r17a` | `--enable_dex1_dds` |
+| `Isaac-Stack-RgyBlock-R17A-Dex2_5-Joint` | R1-7A · Dex2-5 | `r17a` | —（lowcmd 31 / 32 号电机） |
+| `Isaac-Stack-RgyBlock-R17A-O6-Joint` | R1-7A · 灵心 O6 | `r17a` | `--enable_linkerhand_dds` |
+| `Isaac-PickPlace-Cylinder-G1D-Dex1-Joint` | G1-D · Dex1 | `g1d` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-RedBlock-G1D-Dex1-Joint` | G1-D · Dex1 | `g1d` | `--enable_dex1_dds` |
+| `Isaac-Stack-RgyBlock-G1D-Dex1-Joint` | G1-D · Dex1 | `g1d` | `--enable_dex1_dds` |
+| `Isaac-Pick-Redblock-Into-Drawer-G1D-Dex1-Joint` | G1-D · Dex1 | `g1d` | `--enable_dex1_dds` |
+| `Isaac-PickPlace-Cylinder-G1D-Dex3-Joint` | G1-D · Dex3 | `g1d` | `--enable_dex3_dds` |
+| `Isaac-PickPlace-RedBlock-G1D-Dex3-Joint` | G1-D · Dex3 | `g1d` | `--enable_dex3_dds` |
+| `Isaac-Stack-RgyBlock-G1D-Dex3-Joint` | G1-D · Dex3 | `g1d` | `--enable_dex3_dds` |
+| `Isaac-Pick-Redblock-Into-Drawer-G1D-Dex3-Joint` | G1-D · Dex3 | `g1d` | `--enable_dex3_dds` |
 | `Isaac-PickPlace-Cylinder-G129-Dex1-Joint` | G1 29-DoF · Dex1 | `g129` | `--enable_dex1_dds` |
 | `Isaac-PickPlace-RedBlock-G129-Dex1-Joint` | G1 29-DoF · Dex1 | `g129` | `--enable_dex1_dds` |
 | `Isaac-Stack-RgyBlock-G129-Dex1-Joint` | G1 29-DoF · Dex1 | `g129` | `--enable_dex1_dds` |
@@ -103,15 +152,6 @@
 | `Isaac-Stack-RgyBlock-G129-Dex3-Joint` | G1 29-DoF · Dex3 | `g129` | `--enable_dex3_dds` |
 | `Isaac-Pick-Redblock-Into-Drawer-G129-Dex3-Joint` | G1 29-DoF · Dex3 | `g129` | `--enable_dex3_dds` |
 | `Isaac-Move-Cylinder-G129-Dex3-Wholebody` | G1 29-DoF · Dex3 | `g129` | `--enable_dex3_dds` |
-| `Isaac-PickPlace-Cylinder-G129-Inspire-Joint` | G1 29-DoF · Inspire | `g129` | `--enable_inspire_dds` |
-| `Isaac-PickPlace-RedBlock-G129-Inspire-Joint` | G1 29-DoF · Inspire | `g129` | `--enable_inspire_dds` |
-| `Isaac-Stack-RgyBlock-G129-Inspire-Joint` | G1 29-DoF · Inspire | `g129` | `--enable_inspire_dds` |
-| `Isaac-Move-Cylinder-G129-Inspire-Wholebody` | G1 29-DoF · Inspire | `g129` | `--enable_inspire_dds` |
-| `Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint` | H1-2 27-DoF · Inspire | `h1_2` | `--enable_inspire_dds` |
-| `Isaac-PickPlace-RedBlock-H12-27dof-Inspire-Joint` | H1-2 27-DoF · Inspire | `h1_2` | `--enable_inspire_dds` |
-| `Isaac-Stack-RgyBlock-H12-27dof-Inspire-Joint` | H1-2 27-DoF · Inspire | `h1_2` | `--enable_inspire_dds` |
-| `Isaac-PickPlace-Cylinder-G1D-Dex1-Joint` | G1-D · Dex1 | `g1d` | `--enable_dex1_dds` |
-| `Isaac-PickPlace-Cylinder-R1D-Dex1-Joint` | R1-D · Dex1 | `r1d` | `--enable_dex1_dds` |
 
 ## 2、⚙️ 环境配置与运行
 
@@ -148,7 +188,8 @@ pip install -e "./teleimager[server]"
 
 ```bash
 cd unitree_sim_isaaclab
-bash auto_setup_env.sh unitree_sim_env          # 第二个参数可选：PyTorch 的 CUDA 版本标签，默认 cu130
+bash auto_setup_env.sh unitree_sim_env --robot g1d   # 必须指定机器人：g129 | h1_2 | g1d | r1a7d | all（可逗号分隔多个）
+                                                     # 末尾可再加 PyTorch 的 CUDA 版本标签，默认 cu130
 conda activate unitree_sim_env
 ```
 
@@ -186,10 +227,11 @@ python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint 
 
 ### 2.4 资源下载
 
-资源按文件从 HuggingFace 数据集 [unitreerobotics/unitree_sim_isaaclab_usds](https://huggingface.co/datasets/unitreerobotics/unitree_sim_isaaclab_usds) 的 `assets/` 目录下载到 `./assets`（`auto_setup_env.sh` 已包含此步骤；包含场景、G1 / H1-2 的 USD 以及 G1-D / R1-D 的 URDF）：
+资源按文件从 HuggingFace 数据集 [unitreerobotics/unitree_sim_isaaclab_usds](https://huggingface.co/datasets/unitreerobotics/unitree_sim_isaaclab_usds) 的 `assets/` 目录下载到 `./assets`（`auto_setup_env.sh` 已包含此步骤；包含场景、G1 / H1-2 的 USD 以及 G1-D / R1-A7-D 的 URDF）：
 
 ```bash
 bash fetch_assets.sh                                   # 全部资源
+bash fetch_assets.sh --robot g1d,r1a7d                   # 只下载这些机器人任务需要的资源（auto_setup_env.sh 用的就是这种方式）
 bash fetch_assets.sh robots/g1-29dof-dex1-base-fix-usd urdf   # 只下载指定目录（assets/ 下的路径）
 ```
 
@@ -197,30 +239,39 @@ bash fetch_assets.sh robots/g1-29dof-dex1-base-fix-usd urdf   # 只下载指定�
 
 上传（需要对 `unitreerobotics` 组织有写权限的 token；只传新增/修改的文件，本地缓存不上传）：`HF_TOKEN=hf_xxx bash upload_assets.sh [scenes/kitchen ...]`。
 
-机器人既可以用 USD 也可以用 URDF 描述（`robots/robot_assets.py`）：URDF 会在第一次使用时转换为 USD 并缓存在 `assets/robots/.urdf_cache/`。G1-D 和 R1-D 分别从
-`assets/urdf/g1_d_description/g1_d_with_dex1_1.urdf`、`assets/urdf/r1_d_description/r1_d_with_dex1_1.urdf` 加载。
+机器人既可以用 USD 也可以用 URDF 描述（`robots/robot_assets.py`）：URDF 会在第一次使用时转换为 USD 并缓存在 `assets/robots/.urdf_cache/`。G1-D 和 R1-A7-D 分别从
+`assets/urdf/g1_d_description/g1_d_with_dex1_1.urdf`（G1-D Dex3 使用同目录下的 `g1_d_dex3_1.urdf`）、`assets/urdf/r1_d_description/r1_d_with_dex1_1.urdf`（R1-A7-D Dex2-5 使用同目录下的 `r1_d_with_dex2_5.urdf`）加载。R1-7A 机械臂由 `assets/urdf/r1_7a_description` 中的单臂 URDF 组合而成（`robots/r17a_urdf.py`）。
 
 ### 2.5 遥操作
 
 ```bash
+# R1-A7-D + Dex1 夹爪
+python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint --enable_dex1_dds --robot_type r1a7d
+# R1-A7-D + Dex2-5（手是 rt/lowcmd 里的电机，不需要手部 DDS 参数）
+python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1A7D-Dex2_5-Joint --robot_type r1a7d
+# R1-7A 机械臂（单左臂）：Dex1、Dex2-5、灵心 O6
+python sim_main.py --device cpu --task Isaac-PickPlace-RedBlock-R17A-Dex1-Joint --enable_dex1_dds --robot_type r17a
+python sim_main.py --device cpu --task Isaac-PickPlace-RedBlock-R17A-Dex2_5-Joint --robot_type r17a
+python sim_main.py --device cpu --task Isaac-Stack-RgyBlock-R17A-O6-Joint --enable_linkerhand_dds --robot_type r17a
+# 安装方式：-Table-（臂座在桌面上）或 -Column-（臂座在桌边的立柱上）
+python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R17A-Dex1-Column-Joint --enable_dex1_dds --robot_type r17a
+# G1-D + Dex1 夹爪
+python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G1D-Dex1-Joint --enable_dex1_dds --robot_type g1d
+# G1-D + Dex3
+python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G1D-Dex3-Joint --enable_dex3_dds --robot_type g1d
 # G1 29 自由度 + Dex1 夹爪
 python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint --enable_dex1_dds --robot_type g129
 # G1 29 自由度 + Dex3
 python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex3-Joint --enable_dex3_dds --robot_type g129
-# H1-2 + Inspire
-python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint --enable_inspire_dds --robot_type h1_2
 # G1 Wholebody（行走）
 python sim_main.py --device cpu --task Isaac-Move-Cylinder-G129-Dex1-Wholebody --enable_dex1_dds --robot_type g129
-# G1-D
-python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G1D-Dex1-Joint --enable_dex1_dds --robot_type g1d
-# R1-D
-python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
 ```
 
 主要参数：
 - `--task`：任务名称，见上表。
-- `--robot_type`：`g129` | `h1_2` | `g1d` | `r1d`，决定机身 DDS 与动作映射，需与任务中的机器人一致。
+- `--robot_type`：`g129` | `h1_2` | `g1d` | `r1a7d` | `r17a`，决定机身 DDS 与动作映射，需与任务中的机器人一致。
 - `--enable_dex1_dds` / `--enable_dex3_dds` / `--enable_inspire_dds`：分别开启二指夹爪 / 三指灵巧手 / Inspire 手的 DDS（只能选一个）。
+- `--enable_linkerhand_dds`：开启灵心 O6 手的 DDS（`rt/linkerhand/*`，R1-7A O6 任务）。
 - `--enable_wholebody_dds`：开启移动控制指令（`Wholebody` 任务会自动开启）。
 - `--camera_calib <文件>`：相机标定文件（见 2.6）。默认：`$UNITREE_CAMERA_CALIB` 或 `robots/uniclib_calibration.json`。
 - `--camera_include` / `--camera_exclude`：逗号分隔的相机名，开启 / 关闭对应相机（默认：头部双目 + 左右腕部相机）。
@@ -229,19 +280,25 @@ python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1D-Dex1-Joint -
 - `--render_fps`（默认 30）：相机和视窗的渲染频率（按仿真时间计），控制循环仍按 `--step_hz` 运行。调高画面更流畅，但仿真会变慢。
 - `--render_sync`：每次渲染都等待 GPU 完成（图像严格同步，但更慢）。默认不等待，图像最多晚一帧。
 - `--image_server_in_process`：图像服务和仿真跑在同一进程（旧行为；默认在独立进程中运行）。
-- `--view_camera`（`auto` | `world` | `follow` | `none`）：启动时视窗使用的相机。`world` 为固定的整体视角 `/World/PerspectiveCamera`；`follow` 为机器人后上方的跟随相机 `/World/FollowCamera`（跟随位置和朝向）；`auto` 时可移动机器人（G1-D、R1-D、`Wholebody` 任务）用 `follow`，其余用 `world`。两个视角都可以随时在视窗的相机菜单里切换；它们是普通 USD 相机，不被查看时不产生渲染开销。
+- `--view_camera`（`auto` | `world` | `follow` | `none`）：启动时视窗使用的相机。`world` 为固定的整体视角 `/World/PerspectiveCamera`；`follow` 为机器人后上方的跟随相机 `/World/FollowCamera`（跟随位置和朝向）；`auto` 时可移动机器人（G1-D、R1-A7-D、`Wholebody` 任务）用 `follow`，其余用 `world`。两个视角都可以随时在视窗的相机菜单里切换；它们是普通 USD 相机，不被查看时不产生渲染开销。
 
 各机器人使用的 DDS 话题（domain 1）：
 
 | 机器人 | 机身 | 末端执行器 | 底盘 / 升降 |
 |---|---|---|---|
 | G1 / H1-2 | `rt/lowcmd`、`rt/lowstate`（unitree_hg） | `rt/dex1/{left,right}/*`、`rt/dex3/{left,right}/*`、`rt/inspire/*` | `Wholebody`：`rt/run_command/cmd`（见 `send_commands_keyboard.py`、`send_commands_8bit.py`） |
-| G1-D | `rt/lowcmd`、`rt/lowstate`（腰 yaw 12，手臂 15–28；腰 pitch：`rt/waistpitchcmd` → `rt/waistpitchstate`，lowstate 13/14 同时上报，lowcmd 13 启用时也生效） | lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*` | `rt/cmd_vel_no_limit`、`rt/cmd_hispeed` → `rt/hispeed_state`、`rt/slamware_ros_sdk_server_node/odom` |
-| R1-D | `rt/lowcmd`、`rt/lowstate`（升降柱 12，腰 13，手臂 15–28，头 29/30） | lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*` | `rt/cmd_vel`（归一化）→ `rt/state_vel`、`rt/height_state`、`rt/height_alarm` |
+| G1-D | `rt/lowcmd`、`rt/lowstate`（腰 yaw 12，手臂 15–28；腰 pitch：`rt/waistpitchcmd` → `rt/waistpitchstate`，lowstate 13/14 同时上报，lowcmd 13 启用时也生效） | Dex1：lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*`；Dex3：`rt/dex3/{left,right}/*` | `rt/cmd_vel_no_limit`、`rt/cmd_hispeed` → `rt/hispeed_state`、`rt/slamware_ros_sdk_server_node/odom` |
+| R1-A7-D | `rt/lowcmd`、`rt/lowstate`（升降柱 12，腰 13，手臂 15–28，头 29/30） | Dex1：lowcmd/lowstate 31（左）/ 33（右），或 `rt/dex1/{left,right}/*`；Dex2-5：lowcmd/lowstate 31 / 32（左手四指、拇指）、33 / 34（右手四指、拇指），纯力矩 | `rt/cmd_vel`（归一化）→ `rt/state_vel`、`rt/height_state`、`rt/height_alarm` |
 
-G1-D / R1-D 与真机（unirobot）布局一致：Dex1 夹爪是 lowcmd 的 31 / 33 号电机（internal 接线，电机 q 0 闭合 … 5.4 张开；该槽位 mode 为 1 且 kp > 0 时生效，此时优先于 `rt/dex1/*`）；G1-D 腰 pitch 通过 `rt/waistpitchcmd`（unitree_hg `MotorCmd_`）控制。收到 `rt/waistpitchcmd` 之前，lowcmd 13 号只有在 mode 为 1 时才驱动腰 pitch。lowstate 中同时上报两个夹爪电机，以及 13、14 号上的腰 pitch。
+G1-D / R1-A7-D 与真机（unirobot）布局一致：Dex1 夹爪是 lowcmd 的 31 / 33 号电机（internal 接线，电机 q 0 闭合 … 5.4 张开；该槽位 mode 为 1 且 kp > 0 时生效，此时优先于 `rt/dex1/*`）；G1-D 腰 pitch 通过 `rt/waistpitchcmd`（unitree_hg `MotorCmd_`）控制。收到 `rt/waistpitchcmd` 之前，lowcmd 13 号只有在 mode 为 1 时才驱动腰 pitch。lowstate 中同时上报两个夹爪电机，以及 13、14 号上的腰 pitch。
 
-R1-D 的速度档位可通过环境变量 `UNITREE_R1D_GEAR=low|mid|high` 设置（默认 `low`）。
+Dex2-5 腱绳手（R1-A7-D）的控制方式与真机一致（unirobot `r1_a7_d/dex2_5`，internal 接线）：每只手两个纯力矩电机（四指、拇指），占用 lowcmd 的 31 / 32（左）和 33 / 34（右）号电机。槽位 mode 为 1 时生效，只读取 `tau`（限幅 ±0.3 Nm，正值闭合、负值张开；`q`、`kp`、`kd` 被忽略）。零力矩时手不会张开：已经被物体挡住的手指继续压住物体（仿真中把传动当作不可反驱，见 `robots/dex2_5_hand.py` 的 `DEX2_5_HOLD_GRIP`），抓住的物体会一直留在手里，直到发送张开力矩；还在运动的手指则停在当前位置。lowstate 在相同槽位上报这四个电机；与真机一样，`q` / `dq` 不是手指角度（仿真中定义为该电机所驱动关节的平均弯曲角，单位 rad，0 为张开）。真机的腱绳传动关系没有公开，仿真里电机到关节的力矩比例和关节阻尼是假设值（`robots/dex2_5_hand.py`）。除非标定文件里有 `r1_d_with_dex2_5` 的手眼结果，否则这只手不创建腕部相机。
+
+R1-7A（固定底座的 7 轴机械臂；真机还没有 DDS 接口，仿真接口沿用上面几款机器人的做法）：每个机器人都是一条左臂，关节 J1–J7 对应 lowcmd/lowstate 的 0–6 号电机。Dex1 夹爪为 lowcmd/lowstate 31 号电机或 `rt/dex1/left/*`（与 R1-A7-D 左夹爪相同），Dex2-5 为 31 / 32 号纯力矩电机（与 R1-A7-D 左手相同）。灵心 O6 使用 `rt/linkerhand/{left,right}/cmd` / `state` 话题（unitree_go `MotorCmds_` / `MotorStates_`，6 个电机，顺序与灵心 SDK 一致：拇指弯曲、拇指侧摆、食指、中指、无名指、小指；`q` 为原始角度 0–255，255 为张开；各指远端关节按 URDF 的耦合关系跟随）。各手的关节驱动参数是假设值（`robots/linkerhand_o6.py`）；O6 手来自 `R1_7a_linkerhandO6_left.urdf`。安装方式：臂座可以贴合放在桌面上、紧靠机器人一侧的桌边（"table"），也可以装在紧贴桌边、立在地面上的立柱上，臂座比桌面高 0.15 m（"column"）。每个 R1-7A 任务都支持两种方式：在 `-Joint` 前加 `-Table-` 或 `-Column-`（例如 `Isaac-PickPlace-Cylinder-R17A-Dex1-Column-Joint`）；不带后缀的任务名保持默认方式（圆柱 / 红色方块：桌面，堆叠：立柱）。见 `tasks/r17a_tasks/r17a_env_cfg.py` 与 `tasks/common_config/r17a_robot_configs.py`。
+
+R1-A7-D 的速度档位可通过环境变量 `UNITREE_R1A7D_GEAR=low|mid|high` 设置（默认 `low`）。
+
+底盘 / 升降响应：底盘速度指令按真机的方式作用到仿真底盘上——先有一段纯延迟，再经过加 / 减速限幅和一个很短的一阶滞后；发布的底盘状态（里程计、升降）也和真机一样滞后于实际运动。参数按机器人分别放在 `robots/sysid/`（`g1d.py`、`r1a7d.py`；模型实现在 `action_provider/base_response.py`）。G1-D 的参数来自真机辨识（前进：延迟 0.14 s、加速 0.35 m/s²、减速 1.2 m/s²；转向：0.10 s、1.8 / 4.0 rad/s²；里程计滞后 0.105 s、20 Hz；升降 0.077 m/s，`rt/hispeed_state.z` 与真机一样归一化到 [-1, 1]）。R1-A7-D 目前仍使用其底盘模块的标称值（`identified=False`）。新增机器人时，写一个 `robots/sysid/<robot>.py`，并在该机器人的动作提供器里设置 `SYSID`。
 
 ### 2.6 相机与图像服务
 
@@ -265,10 +322,25 @@ R1-D 的速度档位可通过环境变量 `UNITREE_R1D_GEAR=low|mid|high` 设置
 ```bash
 python tools/g1_keyboard_teleop.py --hand dex1     # G1：手臂 + 手（dex1 / dex3 / inspire）
 python tools/g1d_keyboard_teleop.py                # G1-D：底盘、升降柱、腰、手臂、夹爪
-python tools/r1d_keyboard_teleop.py                # R1-D：底盘、升降柱、腰、头、手臂、夹爪
+python tools/r1a7d_keyboard_teleop.py                # R1-A7-D：底盘、升降柱、腰、头、手臂、Dex1 夹爪 / Dex2-5 手
+python tools/r17a_keyboard_teleop.py                 # R1-7A：机械臂和 Dex1 / Dex2-5 / O6（按任务自动识别）
 ```
 
-脚本发布与 xr_teleoperate 相同的 DDS 话题。手在笛卡尔空间中移动（逆运动学见 `tools/arm_ik.py`）：
+`r1a7d_keyboard_teleop.py` 会根据正在运行的任务（`rt/sim_state`）自动识别末端执行器，也可以用 `--hand dex1` / `--hand dex2_5` 手动指定。Dex2-5 手：Z / X、C / V 按住时施加闭合 / 张开力矩；松开 Z / C 后手继续握住物体，用 X / V 张开。
+
+仿真的 Dex2-5 手有一个无界面测试（不需要 DDS，约 3 分钟；输出 `TEST ok / FAIL` 行，全部通过时退出码为 0）：力矩控制、lowstate 31–34 号电机的数值、左右手分别抓取圆柱并在松开力矩后继续握住、环境重置。
+
+```bash
+python tools/dex2_5_test.py --device cpu --viz none
+```
+
+R1-7A 机械臂也有对应的测试（三种机器人约 5 分钟）：手臂跟随 lowcmd 0–6 号电机、Dex1 / Dex2-5 / O6 的指令，以及 lowstate 和手部状态的数值。
+
+```bash
+python tools/r17a_test.py --device cpu --viz none
+```
+
+键盘脚本发布与 xr_teleoperate 相同的 DDS 话题。手在笛卡尔空间中移动（逆运动学见 `tools/arm_ik.py`）：
 
 | 按键 | 功能 |
 |---|---|
@@ -277,10 +349,10 @@ python tools/r1d_keyboard_teleop.py                # R1-D：底盘、升降柱�
 | TAB | 切换手：左 / 右 / 双手（镜像） |
 | P | 回到初始姿态 |
 | Z / X、C / V | 左 / 右夹爪 闭合 / 张开 |
-| W / S、A / D | 底盘 前进 / 后退、转向（G1-D、R1-D） |
-| R / F、空格 | 升降 上 / 下、底盘与升降停止（G1-D、R1-D） |
-| T / G、Y / H | G1-D：腰 俯仰 / 偏航；R1-D：头 俯仰 / 偏航 |
-| Q / E | R1-D：腰 偏航 |
+| W / S、A / D | 底盘 前进 / 后退、转向（G1-D、R1-A7-D） |
+| R / F、空格 | 升降 上 / 下、底盘与升降停止（G1-D、R1-A7-D） |
+| T / G、Y / H | G1-D：腰 俯仰 / 偏航；R1-A7-D：头 俯仰 / 偏航 |
+| Q / E | R1-A7-D：腰 偏航 |
 | ESC | 退出 |
 
 ### 2.8 数据回放
@@ -314,14 +386,18 @@ python sim_main.py --device cpu --task Isaac-Stack-RgyBlock-G129-Dex1-Joint --en
 
 ```
 unitree_sim_isaaclab/
-├── action_provider          [动作来源：DDS（G1/H1-2、Wholebody、G1-D、R1-D）、文件回放、策略]
-├── dds                      [DDS 通信：机身、Dex1 / Dex3 / Inspire、G1-D / R1-D 底盘与升降、奖励、重置]
+├── action_provider          [动作来源：DDS（G1/H1-2、Wholebody、G1-D、R1-A7-D）、文件回放、策略]
+├── dds                      [DDS 通信：机身、Dex1 / Dex3 / Inspire、G1-D / R1-A7-D 底盘与升降、奖励、重置]
 ├── layeredcontrol           [底层控制：把动作设置到仿真环境中]
 ├── robots
 │   ├── robot_assets.py      [从 USD 或 URDF 加载机器人（URDF 转 USD、连杆颜色、连杆 prim 路径）]
 │   ├── unitree.py           [G1 / H1-2 配置]
 │   ├── unitree_g1d.py       [G1-D 配置]
-│   ├── unitree_r1d.py       [R1-D 配置]
+│   ├── unitree_r1a7d.py     [R1-A7-D 配置（Dex1 / Dex2-5）]
+│   ├── dex2_5_hand.py       [Dex2-5 腱绳手：关节、电机槽位、仿真传动模型]
+│   ├── unitree_r17a.py      [R1-7A 机械臂机器人（Dex1 / Dex2-5 / O6）]
+│   ├── r17a_urdf.py         [组合 R1-7A 机器人 URDF、手臂默认姿态]
+│   ├── linkerhand_o6.py     [灵心 O6：关节、耦合关系、原始角度映射]
 │   └── uniclib_calibration.json  [默认相机标定文件]
 ├── tasks
 │   ├── common_config        [机器人 / 相机预设、相机标定读取、环境基础配置]
@@ -333,7 +409,8 @@ unitree_sim_isaaclab/
 │   ├── g1_tasks             [G1 任务]
 │   ├── h1-2_tasks           [H1-2 任务]
 │   ├── g1d_tasks            [G1-D 任务]
-│   ├── r1d_tasks            [R1-D 任务]
+│   ├── r1a7d_tasks          [R1-A7-D 任务]
+│   ├── r17a_tasks           [R1-7A 机械臂任务]
 │   └── utils
 ├── teleimager               [图像服务（ZMQ + WebRTC），git 子模块，sim 分支]
 ├── tools                    [键盘测试脚本、手臂逆解、数据转换、USD 工具]

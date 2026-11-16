@@ -1,0 +1,7 @@
+# Copyright (c) 2025, Unitree Robotics Co., Ltd. All Rights Reserved.
+# License: Apache License, Version 2.0
+from tasks.common_rewards.base_reward_pickplace_redblock import compute_reward
+
+__all__ = [
+    "compute_reward",
+]

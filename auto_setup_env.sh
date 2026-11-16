@@ -2,8 +2,11 @@
 # Automatic environment setup for unitree_sim_isaaclab
 #   Isaac Sim 6.2.0 + Isaac Lab 3.0.0 (Python 3.12, PyTorch 2.11 / CUDA 13.0)
 #
-# Usage:   bash auto_setup_env.sh <env_name> [cuda_tag]
-# Example: bash auto_setup_env.sh unitree_sim_env            # default cuda_tag: cu130
+# Usage:   bash auto_setup_env.sh <env_name> --robot <types> [cuda_tag]
+#   --robot / -r : g129 | h1_2 | g1d | r1a7d | r17a | all (comma list or repeated); only the assets of these robots
+#                  are downloaded (more can be added later with: bash fetch_assets.sh --robot <type>)
+# Example: bash auto_setup_env.sh unitree_sim_env --robot g1d          # default cuda_tag: cu130
+#          bash auto_setup_env.sh unitree_sim_env --robot g129,r1a7d cu128
 #
 # Requirements: Ubuntu 22.04 or newer (GLIBC >= 2.35), NVIDIA driver >= 580.65.06, conda.
 # IsaacLab, cyclonedds and unitree_sdk2_python are cloned next to this repository.
@@ -30,14 +33,44 @@ if [ ! -f "teleimager/pyproject.toml" ]; then
 fi
 
 # 1. Check arguments
-if [ "$#" -lt 1 ]; then
-    echo "Usage: bash auto_setup_env.sh <env_name> [cuda_tag (default: $DEFAULT_CUDA)]"
-    echo "Example: bash auto_setup_env.sh unitree_sim_env"
-    echo "Installs Isaac Sim 6.2.0 + Isaac Lab 3.0.0 (Python $PYTHON_VER)."
+usage() {
+    echo "Usage: bash auto_setup_env.sh <env_name> --robot <g129|h1_2|g1d|r1a7d|r17a|all>[,...] [cuda_tag (default: $DEFAULT_CUDA)]"
+    echo "Example: bash auto_setup_env.sh unitree_sim_env --robot g1d"
+    echo "Installs Isaac Sim 6.2.0 + Isaac Lab 3.0.0 (Python $PYTHON_VER) and the assets of the given robots."
     exit 1
+}
+ENV_NAME=""
+CUDA_VER=""
+ROBOTS=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --robot|-r)
+            [ -n "${2:-}" ] || usage
+            ROBOTS="${ROBOTS:+$ROBOTS,}$2"
+            shift 2 ;;
+        -h|--help) usage ;;
+        -*) echo "Error: unknown option $1"; usage ;;
+        *)
+            if [ -z "$ENV_NAME" ]; then ENV_NAME=$1
+            elif [ -z "$CUDA_VER" ]; then CUDA_VER=$1
+            else echo "Error: unexpected argument $1"; usage
+            fi
+            shift ;;
+    esac
+done
+[ -n "$ENV_NAME" ] || usage
+if [ -z "$ROBOTS" ]; then
+    echo "Error: please choose the robot type(s) with --robot (g129, h1_2, g1d, r1a7d, r17a or all)."
+    usage
 fi
-ENV_NAME=$1
-CUDA_VER=${2:-$DEFAULT_CUDA}
+for r in ${ROBOTS//,/ }; do
+    case "$r" in
+        g129|h1_2|g1d|r1a7d|r17a|all) ;;
+        *) echo "Error: unknown robot type '$r' (g129, h1_2, g1d, r1a7d, r17a or all)"; exit 1 ;;
+    esac
+done
+CUDA_VER=${CUDA_VER:-$DEFAULT_CUDA}
+echo "Environment: $ENV_NAME, robots: $ROBOTS, CUDA tag: $CUDA_VER"
 
 # 2. System checks (warnings only)
 GLIBC_VER=$(ldd --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+$' || true)
@@ -108,10 +141,10 @@ fi
 chmod 600 "$CERT_DIR/key.pem"
 
 echo "**************************************************"
-echo "Downloading scene / robot assets..."
+echo "Downloading scene / robot assets ($ROBOTS)..."
 echo "**************************************************"
 chmod +x fetch_assets.sh
-bash fetch_assets.sh
+bash fetch_assets.sh --robot "$ROBOTS"
 
 # ==========================================
 # PHASE 2: BUILD C++ DEPENDENCIES
@@ -199,5 +232,14 @@ echo "=================================================="
 echo "Environment $ENV_NAME is ready (Isaac Sim 6.2.0 / Isaac Lab 3.0.0)."
 echo "To begin using it, run: conda activate $ENV_NAME"
 echo "Quick test:"
-echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint --enable_dex1_dds --robot_type g129"
+for r in ${ROBOTS//,/ }; do
+    case "$r" in
+        g129|all) echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G129-Dex1-Joint --enable_dex1_dds --robot_type g129" ;;
+        h1_2) echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-H12-27dof-Inspire-Joint --enable_inspire_dds --robot_type h1_2" ;;
+        g1d)  echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-G1D-Dex1-Joint --enable_dex1_dds --robot_type g1d" ;;
+        r1a7d)  echo "  python sim_main.py --device cpu --task Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint --enable_dex1_dds --robot_type r1a7d" ;;
+        r17a) echo "  python sim_main.py --device cpu --task Isaac-PickPlace-RedBlock-R17A-Dex1-Joint --enable_dex1_dds --robot_type r17a" ;;
+    esac
+done
+echo "Assets of other robots: bash fetch_assets.sh --robot <g129|h1_2|g1d|r1a7d|r17a>"
 echo "=================================================="

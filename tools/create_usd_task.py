@@ -4,11 +4,11 @@
 """Assemble an arbitrary USD scene and the Unitree robots into simulation tasks (one task per robot).
 
     python tools/create_usd_task.py --usd ~/scenes/kitchen/scene.usda [--name Kitchen] \\
-        [--robots r1d-dex1,g1d-dex1] [--robot-pose 6.3,-2.0,0] [--check]
+        [--robots r1a7d-dex1,g1d-dex1] [--robot-pose 6.3,-2.0,0] [--check]
 
 then run e.g.
 
-    python sim_main.py --device cpu --task Isaac-Kitchen-R1D-Dex1-Joint --enable_dex1_dds --robot_type r1d
+    python sim_main.py --device cpu --task Isaac-Kitchen-R1A7D-Dex1-Joint --enable_dex1_dds --robot_type r1a7d
 
 What it does:
   1. analyzes the USD (units / up axis, floor, lights, physics scene, rigid bodies, articulations, colliders,
@@ -52,8 +52,8 @@ PROFILES = {
                          ref="tasks.g1_tasks.pick_place_cylinder_g1_29dof_inspire.pickplace_cylinder_g1_29dof_inspire_env_cfg:PickPlaceG129InspireBaseFixEnvCfg"),
     "g1d-dex1": dict(pkg="g1d_tasks", suffix="G1D-Dex1", robot_type="g1d", hand="--enable_dex1_dds", kind="g1d",
                      ref="tasks.g1d_tasks.pick_place_cylinder_g1d_dex1.pickplace_cylinder_g1d_dex1_joint_env_cfg:PickPlaceG1DDEX1JointEnvCfg"),
-    "r1d-dex1": dict(pkg="r1d_tasks", suffix="R1D-Dex1", robot_type="r1d", hand="--enable_dex1_dds", kind="r1d",
-                     ref="tasks.r1d_tasks.pick_place_cylinder_r1d_dex1.pickplace_cylinder_r1d_dex1_joint_env_cfg:PickPlaceR1DDEX1JointEnvCfg"),
+    "r1a7d-dex1": dict(pkg="r1a7d_tasks", suffix="R1A7D-Dex1", robot_type="r1a7d", hand="--enable_dex1_dds", kind="r1a7d",
+                     ref="tasks.r1a7d_tasks.pick_place_cylinder_r1a7d_dex1.pickplace_cylinder_r1a7d_dex1_joint_env_cfg:PickPlaceR1A7DDEX1JointEnvCfg"),
 }
 KIND = {
     # root height that puts the robot on the floor; footprint (robot frame, x forward) for the free-spot search;
@@ -62,7 +62,7 @@ KIND = {
                note="fixed base (pelvis held at this height); z 0.76 puts the feet on the floor"),
     "g1d": dict(root_z=0.1114, base=((-0.35, 0.35), (-0.30, 0.30)), joints={"LZ_mt_Joint": 0.0, "LZ_it_Joint": 0.0},
                 note="z 0.1114 puts the wheels on the floor; lift: LZ_mt_Joint / LZ_it_Joint 0 .. 0.21 m each"),
-    "r1d": dict(root_z=0.155, base=((-0.35, 0.35), (-0.30, 0.30)), joints={"lift_stage1_joint": 0.27, "lift_stage2_joint": 0.27},
+    "r1a7d": dict(root_z=0.155, base=((-0.35, 0.35), (-0.30, 0.30)), joints={"lift_stage1_joint": 0.27, "lift_stage2_joint": 0.27},
                 note="z 0.155 puts the wheels on the floor; lift: lift_stage1/2_joint 0 .. 0.425 m each"),
 }
 MARGIN = 0.10  # [m] free space around the robot footprint for the automatic spot
@@ -190,7 +190,7 @@ def spec_source(args, spec, robots, poses):
         "    # ======================================================================================",
         "    # ROBOT STANDING POSE - edit here (metres / degrees, scene coordinates: z up, yaw 0 = facing +x).",
         "    # pos: robot root [x, y, z]; keep z (it puts the robot on the floor). yaw_deg: heading.",
-        "    # joint_pos: initial joint positions, e.g. the lift column of G1-D / R1-D (table height).",
+        "    # joint_pos: initial joint positions, e.g. the lift column of G1-D / R1-A7-D (table height).",
         "    # Restart sim_main.py after editing. In Isaac Sim, read a spot's coordinates by selecting a prim",
         "    # and looking at its Transform (Property panel), or place a prim named RobotBase in the USD and",
         "    # re-run tools/create_usd_task.py --force.",
@@ -261,7 +261,7 @@ def generate(args, spec, robots, poses):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--usd", required=True, help="scene USD (.usd/.usda/.usdc); files it references are copied too")
-    ap.add_argument("--name", default=None, help="task name part (default: Scene-<usd file name>) -> Isaac-<name>-R1D-Dex1-Joint")
+    ap.add_argument("--name", default=None, help="task name part (default: Scene-<usd file name>) -> Isaac-<name>-R1A7D-Dex1-Joint")
     ap.add_argument("--robots", default=",".join(PROFILES), help=f"comma-separated, from: {', '.join(PROFILES)}")
     ap.add_argument("--robot-pose", type=lambda s: floats(s, 3), default=None,
                     help="x,y,yaw_deg robot standing pose (scene coordinates); default: RobotBase marker, else a free spot")

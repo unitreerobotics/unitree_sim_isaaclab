@@ -100,13 +100,15 @@ def get_stereo_extrinsic(name: str, group: str = "head_stereo"):
     return None
 
 
-def get_handeye(arm: str, robot_asset: str | None = None):
+def get_handeye(arm: str, robot_asset: str | None = None, also_accept: tuple = ()):
     """Eye-in-hand pose of the wrist camera: (reference_link, pos [m], quat xyzw), or None if not usable.
 
     ``arm`` is ``"left_arm"`` or ``"right_arm"``. The rotation is taken from the 4x4 ``T_wrist_cam``.
     If ``robot_asset`` (URDF / USD path of the simulated robot) is given, the result is only used if it
     was calibrated with that robot (``urdf.name``, compared without extension) and its reference link
     exists in the asset - a hand-eye result of another hand / robot would put the camera somewhere wrong.
+    ``also_accept``: further URDF names the result may have been calibrated with (e.g. the G1-D Dex3 URDF
+    ``g1_d_dex3_1`` shares the arm / wrist links of the ``g1_d`` the hand-eye was calibrated with).
     """
     he = load_calibration().get("handeye", {}).get(arm)
     if not _usable(he):
@@ -114,7 +116,7 @@ def get_handeye(arm: str, robot_asset: str | None = None):
     if robot_asset is not None:
         calib_urdf = (he.get("urdf") or {}).get("name")
         asset_name = os.path.splitext(os.path.basename(robot_asset))[0]
-        if not calib_urdf or os.path.splitext(calib_urdf)[0] != asset_name:
+        if not calib_urdf or os.path.splitext(calib_urdf)[0] not in (asset_name, *also_accept):
             log_once(f"[camera_calibration] hand-eye '{arm}' was calibrated with '{calib_urdf}', not "
                      f"'{os.path.basename(robot_asset)}': not used")
             return None

@@ -5,8 +5,8 @@ from dds.dds_master import dds_manager
 def create_dds_objects(args_cli,env):
     publish_names = []
     subscribe_names = []
-    # g129 / h1_2 / g1d / r1d all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
-    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1d"):
+    # g129 / h1_2 / g1d / r1a7d / r17a all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
+    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1a7d", "r17a"):
         from dds.g1_robot_dds import G1RobotDDS
         g1_robot = G1RobotDDS()
         dds_manager.register_object("g129", g1_robot)
@@ -30,6 +30,12 @@ def create_dds_objects(args_cli,env):
         dds_manager.register_object("inspire", inspire)
         publish_names.append("inspire")
         subscribe_names.append("inspire")
+    if getattr(args_cli, "enable_linkerhand_dds", False):
+        # LinkerHand O6 (rt/linkerhand/{left,right}/cmd, .../state)
+        from dds.linkerhand_dds import LinkerHandDDS
+        dds_manager.register_object("linkerhand", LinkerHandDDS())
+        publish_names.append("linkerhand")
+        subscribe_names.append("linkerhand")
     if "Wholebody" in args_cli.task or args_cli.enable_wholebody_dds:
         from dds.commands_dds import RunCommandDDS
         run_command_dds = RunCommandDDS()
@@ -41,6 +47,8 @@ def create_dds_objects(args_cli,env):
         from dds.g1d_mobile_dds import G1DMobileDDS
         g1d_mobile = G1DMobileDDS()
         dds_manager.register_object("g1d_mobile", g1d_mobile)
+        from robots.sysid.g1d import G1D_SYSID
+        dds_manager.set_publish_rate("g1d_mobile", G1D_SYSID.state_rate)  # odometry / lift state at the real robot's rate
         publish_names.append("g1d_mobile")
         subscribe_names.append("g1d_mobile")
         # G1-D waist pitch on its own topics like the real flagship (rt/waistpitchcmd -> rt/waistpitchstate)
@@ -48,13 +56,14 @@ def create_dds_objects(args_cli,env):
         dds_manager.register_object("g1d_waist_pitch", G1DWaistPitchDDS())
         publish_names.append("g1d_waist_pitch")
         subscribe_names.append("g1d_waist_pitch")
-    if args_cli.robot_type == "r1d":
-        # R1-D base + lift column (rt/cmd_vel, rt/state_vel, rt/height_state, rt/height_alarm @ 50 Hz)
-        from dds.r1d_mobile_dds import R1DMobileDDS
-        dds_manager.register_object("r1d_mobile", R1DMobileDDS())
-        dds_manager.set_publish_rate("r1d_mobile", 50.0)
-        publish_names.append("r1d_mobile")
-        subscribe_names.append("r1d_mobile")
+    if args_cli.robot_type == "r1a7d":
+        # R1-A7-D base + lift column (rt/cmd_vel, rt/state_vel, rt/height_state, rt/height_alarm @ 50 Hz)
+        from dds.r1a7d_mobile_dds import R1A7DMobileDDS
+        from robots.sysid.r1a7d import R1A7D_SYSID
+        dds_manager.register_object("r1a7d_mobile", R1A7DMobileDDS())
+        dds_manager.set_publish_rate("r1a7d_mobile", R1A7D_SYSID.state_rate)
+        publish_names.append("r1a7d_mobile")
+        subscribe_names.append("r1a7d_mobile")
     from dds.reset_pose_dds import ResetPoseCmdDDS
     reset_pose_dds = ResetPoseCmdDDS()
     dds_manager.register_object("reset_pose", reset_pose_dds)
@@ -75,8 +84,8 @@ def create_dds_objects(args_cli,env):
 def create_dds_objects_replay(args_cli,env):
     publish_names = []
     subscribe_names = []
-    # g129 / h1_2 / g1d / r1d all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
-    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1d"):
+    # g129 / h1_2 / g1d / r1a7d / r17a all use the unitree_hg body DDS (rt/lowcmd, rt/lowstate), registered as "g129"
+    if args_cli.robot_type in ("g129", "h1_2", "g1d", "r1a7d", "r17a"):
         from dds.g1_robot_dds import G1RobotDDS
         g1_robot = G1RobotDDS()
         dds_manager.register_object("g129", g1_robot)
@@ -100,6 +109,12 @@ def create_dds_objects_replay(args_cli,env):
         dds_manager.register_object("inspire", inspire)
         publish_names.append("inspire")
         subscribe_names.append("inspire")
+    if getattr(args_cli, "enable_linkerhand_dds", False):
+        # LinkerHand O6 (rt/linkerhand/{left,right}/cmd, .../state)
+        from dds.linkerhand_dds import LinkerHandDDS
+        dds_manager.register_object("linkerhand", LinkerHandDDS())
+        publish_names.append("linkerhand")
+        subscribe_names.append("linkerhand")
 
     dds_manager.start_publishing(publish_names)
     dds_manager.start_subscribing(subscribe_names)

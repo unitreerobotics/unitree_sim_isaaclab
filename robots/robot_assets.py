@@ -56,9 +56,10 @@ def _unique_material_names(root) -> None:
     URDF materials are global by name: exported URDFs often reuse one name (or "") for different
     inline colors - e.g. "silvery" for the light-grey arms and the black Dex1 gripper - and the importer
     then uses the first definition for all of them. Inline materials are renamed after their color, so
-    equal colors still share one material.
+    equal colors still share one material. Top-level (named, shared) materials keep their name so that
+    ``<material name="..."/>`` references to them still resolve.
     """
-    for mat in root.iter("material"):
+    for mat in (m for visual in root.iter("visual") for m in visual.findall("material")):
         color = mat.find("color")
         if color is None or not color.get("rgba"):
             continue  # reference to a named (top-level) material, or a texture
@@ -126,6 +127,7 @@ def robot_spawn_cfg(
     merge_fixed_joints: bool = False,
     force_usd_conversion: bool = False,
     link_colors: dict[str, tuple] | None = None,
+    convert_mimic_joints: bool = False,
 ):
     """Spawner config for a robot given as USD or URDF (see module docstring).
 
@@ -137,6 +139,8 @@ def robot_spawn_cfg(
             (head_link, *_wrist_yaw_link, ...) remain separate prims cameras can attach to.
         force_usd_conversion: URDF only - re-convert even if the cache is up to date.
         link_colors: URDF only - ``{link-name regex: (r, g, b, a)}`` visual color overrides (sRGB).
+        convert_mimic_joints: URDF only - import ``<mimic>`` joints as normal joints (the coupling is then applied
+            by the controller, e.g. the LinkerHand finger joints of robots/unitree_r17a.py).
     """
     common = dict(
         activate_contact_sensors=activate_contact_sensors,
@@ -158,6 +162,7 @@ def robot_spawn_cfg(
             force_usd_conversion=force_usd_conversion,
             fix_base=fix_base,
             merge_fixed_joints=merge_fixed_joints,
+            convert_mimic_joints_to_normal_joints=convert_mimic_joints,
             # gains are set per joint group by the actuator configs of the ArticulationCfg
             joint_drive=sim_utils.UrdfConverterCfg.JointDriveCfg(
                 drive_type="force",
@@ -205,14 +210,19 @@ def robot_link_prim_path(asset_path: str, link: str) -> str:
     raise ValueError(f"Unsupported robot asset type '{suffix}' ({asset_path})")
 
 
-def apply_material_finish(env, env_ids, asset_name: str = "robot", metal=(0.85, 0.28), dark=(0.45, 0.4), black=(0.0, 0.5)):
+def apply_material_finish(env, env_ids, asset_name: str = "robot", metal=(0.85, 0.28), dark=(0.45, 0.4), black=(0.0, 0.5),
+                          materials: str | None = None):
     """Event (mode "startup"): give the robot's URDF-converted materials a metal / plastic finish.
 
     The URDF importer only authors a diffuse color (metallic 0, roughness 0.5). The robot meshes are
     instanceable and all reference the converted ``materials.usda`` layer, so that layer is edited in
     memory (the file on disk is not changed). The finish (metallic, roughness) is chosen per material
     from its diffuse color (linear): light -> ``metal``, dark grey -> ``dark``, near black -> ``black``.
+    ``materials``: regex; only materials whose name matches it are edited (default: all). Converted material
+    names end with their sRGB color, e.g. ``white_0820_0830_0840_1000`` for rgba 0.82 0.83 0.84 1.
     """
+    import re
+
     import omni.usd
     from pxr import Sdf
 
@@ -229,6 +239,8 @@ def apply_material_finish(env, env_ids, asset_name: str = "robot", metal=(0.85, 
             continue
         scope = layer.GetPrimAtPath("/Materials")
         for spec in scope.nameChildren if scope else []:
+            if materials is not None and not re.fullmatch(materials, spec.name):
+                continue
             diffuse = spec.attributes.get("inputs:diffuseColor")
             if diffuse is None or diffuse.default is None:
                 continue

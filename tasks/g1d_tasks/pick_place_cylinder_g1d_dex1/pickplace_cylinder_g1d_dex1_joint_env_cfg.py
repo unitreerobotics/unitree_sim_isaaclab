@@ -22,6 +22,8 @@ from . import mdp
 # use Isaac Lab native event system
 
 from tasks.common_config import  G1DRobotPresets  # isort: skip
+from robots.robot_assets import apply_material_finish
+from robots.unitree_g1d import G1D_UPPER_BODY_FINISH
 from tasks.common_config.g1d_camera_configs import G1DCameraPresets
 from tasks.common_event.event_manager import SimpleEvent, SimpleEventManager
 
@@ -104,6 +106,8 @@ class RewardsCfg:
 
 @configclass
 class EventCfg:
+    # metal finish of the upper body like the G1 29dof (the URDF only carries colors)
+    robot_material_finish = EventTermCfg(func=apply_material_finish, mode="startup", params={"asset_name": "robot", **G1D_UPPER_BODY_FINISH})
     # write the robot's default joint positions (lift height, open grippers, ...) on every reset;
     # without it the joints start at 0 (lift fully retracted, grippers closed)
     reset_robot_joints = EventTermCfg(

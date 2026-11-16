@@ -29,10 +29,11 @@ parser.add_argument("--action_source", type=str, default="dds",
                    help="Action source")
 
 
-parser.add_argument("--robot_type", type=str, default="g129", choices=["g129", "h1_2", "g1d", "r1d"], help="robot type (selects the body DDS / action mapping): g129 | h1_2 | g1d | r1d")
+parser.add_argument("--robot_type", type=str, default="g129", choices=["g129", "h1_2", "g1d", "r1a7d", "r17a"], help="robot type (selects the body DDS / action mapping): g129 | h1_2 | g1d | r1a7d | r17a")
 parser.add_argument("--enable_dex1_dds", action="store_true", help="enable gripper DDS")
 parser.add_argument("--enable_dex3_dds", action="store_true", help="enable dexterous hand DDS")
 parser.add_argument("--enable_inspire_dds", action="store_true", help="enable inspire hand DDS")
+parser.add_argument("--enable_linkerhand_dds", action="store_true", help="enable LinkerHand O6 DDS (rt/linkerhand/*, R1-7A O6 tasks)")
 parser.add_argument("--stats_interval", type=float, default=10.0, help="statistics print interval (seconds)")
 
 parser.add_argument("--file_path", type=str, default="/home/unitree/Code/xr_teleoperate/teleop/utils/data", help="file path (when action_source=file)")
@@ -64,7 +65,7 @@ parser.add_argument("--image_server_in_process", action="store_true", default=Fa
 parser.add_argument("--view_camera", type=str, default="auto", choices=["auto", "world", "follow", "none"],
                     help="viewport camera at start-up (GUI): world = fixed overview camera (/World/PerspectiveCamera), "
                          "follow = chase camera behind the robot (/World/FollowCamera), auto = follow for mobile robots "
-                         "(G1-D, R1-D, Wholebody tasks) else world. Both can also be selected in the viewport camera menu")
+                         "(G1-D, R1-A7-D, Wholebody tasks) else world. Both can also be selected in the viewport camera menu")
 parser.add_argument("--render_sync", action="store_true", default=False,
                     help="wait for the GPU at every render (Isaac Lab default for synthetic data). Off: camera images may be "
                          "one frame (<= 1/render_fps) old, but rendering is much faster")
@@ -335,7 +336,7 @@ def main(env_cfg):
                 print(f"[camera] follow camera not available: {e}")
             view = args_cli.view_camera
             if view == "auto":
-                mobile = args_cli.robot_type in ("g1d", "r1d") or "Wholebody" in args_cli.task
+                mobile = args_cli.robot_type in ("g1d", "r1a7d") or "Wholebody" in args_cli.task
                 view = "follow" if (mobile and follow_camera is not None) else "world"
             if view == "follow" and follow_camera is not None:
                 _set_viewport_camera(follow_camera.path)
@@ -780,6 +781,41 @@ if __name__ == "__main__":
 
 # Unitree G1-D (wheeled base + lift, Dex1 grippers; robot from URDF assets/urdf/g1_d_description)
 # python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-G1D-Dex1-Joint  --enable_dex1_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-G1D-Dex1-Joint  --enable_dex1_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-G1D-Dex1-Joint  --enable_dex1_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-Pick-Redblock-Into-Drawer-G1D-Dex1-Joint  --enable_dex1_dds --robot_type g1d
+# G1-D with Dex3 hands (assets/urdf/g1_d_description/g1_d_dex3_1.urdf)
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-G1D-Dex3-Joint  --enable_dex3_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-G1D-Dex3-Joint  --enable_dex3_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-G1D-Dex3-Joint  --enable_dex3_dds --robot_type g1d
+# python sim_main.py --device cpu  --task Isaac-Pick-Redblock-Into-Drawer-G1D-Dex3-Joint  --enable_dex3_dds --robot_type g1d
 
-# Unitree R1-D (wheeled base + lift, Dex1 grippers; robot from URDF assets/urdf/r1_d_description)
-# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R1D-Dex1-Joint  --enable_dex1_dds --robot_type r1d
+# Unitree R1-A7-D (wheeled base + lift, Dex1 grippers; robot from URDF assets/urdf/r1_d_description)
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R1A7D-Dex1-Joint  --enable_dex1_dds --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R1A7D-Dex1-Joint  --enable_dex1_dds --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R1A7D-Dex1-Joint  --enable_dex1_dds --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex1-Joint  --enable_dex1_dds --robot_type r1a7d
+
+# R1-A7-D with Dex2-5 tendon hands (assets/urdf/r1_d_description/r1_d_with_dex2_5.urdf; the hands are torque
+# motors 31..34 of rt/lowcmd, no hand DDS flag)
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R1A7D-Dex2_5-Joint  --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R1A7D-Dex2_5-Joint  --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R1A7D-Dex2_5-Joint  --robot_type r1a7d
+# python sim_main.py --device cpu  --task Isaac-Pick-Redblock-Into-Drawer-R1A7D-Dex2_5-Joint  --robot_type r1a7d
+
+# Unitree R1-7A arm (fixed base; one arm with Dex1 / LinkerHand O6, two arms with Dex2-5; robot from the URDFs in
+# assets/urdf/r1_7a_description). Cylinder / red block: arm on the table top, stacking: arm on a column (default).
+# Pick the mounting with -Table- / -Column- before -Joint, e.g. Isaac-PickPlace-Cylinder-R17A-Dex1-Column-Joint.
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R17A-Dex1-Joint  --enable_dex1_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R17A-Dex2_5-Joint  --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-Cylinder-R17A-O6-Joint  --enable_linkerhand_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R17A-Dex1-Joint  --enable_dex1_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R17A-Dex2_5-Joint  --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R17A-O6-Joint  --enable_linkerhand_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R17A-Dex1-Joint  --enable_dex1_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R17A-Dex2_5-Joint  --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R17A-O6-Joint  --enable_linkerhand_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-PickPlace-RedBlock-R17A-Dex1-Column-Joint  --enable_dex1_dds --robot_type r17a
+# python sim_main.py --device cpu  --task Isaac-Stack-RgyBlock-R17A-Dex1-Table-Joint  --enable_dex1_dds --robot_type r17a
+
+

@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 from isaaclab.assets import ArticulationCfg
 from isaaclab.utils import configclass
 
-from robots.unitree_g1d import G1D_CFG_WITH_DEX1
+from robots.unitree_g1d import G1D_CFG_WITH_DEX1, G1D_CFG_WITH_DEX3
 
 
 @configclass
@@ -41,3 +41,18 @@ class G1DRobotPresets:
             init_state=ArticulationCfg.InitialStateCfg(pos=init_pos, rot=init_rot, joint_pos=joint_pos, joint_vel={".*": 0.0}),
         )
 
+    @classmethod
+    def g1_d_dex3(
+        cls,
+        init_pos: Tuple[float, float, float] = (-0.15, -0.08, 0.1114),
+        init_rot: Tuple[float, float, float, float] = (0, 0, 0.7071, 0.7071),
+        custom_joint_pos: Optional[Dict[str, float]] = None,
+        prim_path: str = "/World/envs/env_.*/Robot",
+    ) -> ArticulationCfg:
+        """G1-D with Dex3 hands (same arguments as :meth:`g1_d_dex1`)."""
+        base = G1D_CFG_WITH_DEX3
+        joint_pos = {**base.init_state.joint_pos, **(custom_joint_pos or {})}
+        return base.replace(
+            prim_path=prim_path,
+            init_state=ArticulationCfg.InitialStateCfg(pos=init_pos, rot=init_rot, joint_pos=joint_pos, joint_vel={".*": 0.0}),
+        )

@@ -13,7 +13,8 @@ rt/lowstate has 35 (real G1-D layout, see unirobot ``g1_d_flagship``):
 * 12 / 13: waist yaw (torso_Joint) / waist pitch (Yaw_Joint, xr_teleoperate layout)
 * 14     : waist pitch again (real flagship slot; also published alone on rt/waistpitchstate)
 * 15..28 : arms (same joints as G1, same order)
-* 31 / 33: left / right Dex1 gripper motor (unirobot "internal" wiring, q 0 closed .. 5.4 open)
+* 31 / 33: left / right Dex1 gripper motor (Dex1 robot only; the Dex3 hands use the ``dex3`` DDS object) (unirobot "internal" wiring, q 0 closed .. 5.4 open)
+* 31..34 : Dex2-5 hand motors on a robot with Dex2-5 hands (left fingers, left thumb, right fingers, right thumb; see dex2_5_state.py)
 * others  : not present on the G1-D (no legs), read 0. Lift and base go through g1d_mobile_dds.
 """
 
@@ -29,6 +30,8 @@ from tasks.common_observations.joint_index import JointGather
 # DDS publishers / IMU helper are reused read-only from the G1 modules (they are not robot specific)
 from tasks.common_observations.g1_29dof_state import _get_g1_robot_dds_instance, get_robot_imu_data
 from tasks.common_observations.gripper_state import _get_gripper_dds_instance
+from tasks.common_observations.dex3_state import _get_dex3_dds_instance, get_robot_girl_joint_names
+from tasks.common_observations.dex2_5_state import dex2_5_motor_states, has_dex2_5
 from robots.unitree_g1d import G1D_DEX1_FINGER_CLOSED, G1D_DEX1_FINGER_OPEN, G1D_WAIST_PITCH_JOINT, G1D_WAIST_YAW_JOINT
 
 if TYPE_CHECKING:
@@ -61,7 +64,7 @@ def g1_dex1_to_g1d_finger(x):
     return G1D_DEX1_FINGER_OPEN + c * (G1D_DEX1_FINGER_CLOSED - G1D_DEX1_FINGER_OPEN)
 
 
-# Real G1-D / R1-D (unirobot Dex1 "internal" wiring): the grippers are motors of the body lowcmd / lowstate,
+# Real G1-D / R1-A7-D (unirobot Dex1 "internal" wiring): the grippers are motors of the body lowcmd / lowstate,
 # slot 31 = left, 33 = right, motor q in [0 closed, DEX1_MOTOR_OPEN open] (unirobot dex1_1 qpos_open 5.4).
 DEX1_LOWCMD_SLOTS = {"left": 31, "right": 33}
 DEX1_MOTOR_OPEN = 5.4
@@ -78,10 +81,19 @@ def dex1_motor_to_g1d_finger(q):
 
 
 def dds_lowstate_arrays(env: ManagerBasedRLEnv, pos, vel, torque):
-    """35-slot lowstate (env 0) for DDS: the observation slots plus the Dex1 grippers on motors 31 / 33."""
+    """35-slot lowstate (env 0) for DDS: the observation slots plus the end effector motors of the real "internal"
+    wiring: Dex1 grippers on motors 31 / 33, Dex2-5 hands on 31..34."""
     n = pos.shape[1]
     p, v, t = (torch.zeros(LOWSTATE_SLOTS, device=pos.device, dtype=pos.dtype) for _ in range(3))
     p[:n], v[:n], t[:n] = pos[0], vel[0], torque[0]
+    joint_names = set(env.scene["robot"].data.joint_names)
+    if has_dex2_5(joint_names):
+        slots, q, dq, tau = dex2_5_motor_states(env)
+        for i, s in enumerate(slots):
+            p[s], v[s], t[s] = q[i], dq[i], tau[i]
+        return p, v, t
+    if not set(G1D_DEX1_JOINTS) <= joint_names:
+        return p, v, t  # Dex3 hands: no gripper motors
     _, fp, fv, ft = _gather_states(env, G1D_DEX1_JOINTS, "dex1_lowstate")
     for i, side in enumerate(("right", "left")):  # G1D_DEX1_JOINTS order
         s = DEX1_LOWCMD_SLOTS[side]
@@ -170,4 +182,22 @@ def get_robot_g1d_dex1_joint_states(env: ManagerBasedRLEnv, enable_dds: bool = T
                 dds.write_gripper_state(p[1:], v[1:], t[1:], p[:1], v[:1], t[:1])
         except Exception as e:
             print(f"[g1d_state] Failed to write Dex1 state to DDS: {e}")
+    return pos
+
+
+# Dex3 hands, DDS order (same as the G1 Dex3): left 7 (thumb 0-2, middle 0-1, index 0-1), then right 7
+G1D_DEX3_JOINTS = get_robot_girl_joint_names()
+
+
+def get_robot_g1d_dex3_joint_states(env: ManagerBasedRLEnv, enable_dds: bool = True) -> torch.Tensor:
+    """[batch, 14] Dex3 joint positions (left 7, right 7); published on the ``dex3`` DDS object (rt/dex3/*/state)."""
+    st, pos, vel, torque = _gather_states(env, G1D_DEX3_JOINTS, "g1d_dex3")
+    if enable_dds and pos.shape[0] > 0 and _dds_due(st):
+        try:
+            dds = _get_dex3_dds_instance()
+            if dds:
+                p, v, t = (x[0].contiguous().cpu().numpy() for x in (pos, vel, torque))
+                dds.write_hand_states(p[:7], v[:7], t[:7], p[7:], v[7:], t[7:])
+        except Exception as e:
+            print(f"[g1d_state] Failed to write Dex3 state to DDS: {e}")
     return pos

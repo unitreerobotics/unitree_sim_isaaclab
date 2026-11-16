@@ -9,7 +9,8 @@ Subscribed (commands from the teleoperation client):
     rt/cmd_vel_no_limit    geometry_msgs/Twist     linear.x [m/s], angular.z [rad/s]
 
 Published (simulated robot state):
-    rt/hispeed_state                          geometry_msgs/Point32   y = lift height [m], z = lift speed [m/s]
+    rt/hispeed_state                          geometry_msgs/Point32   y = lift height [m], z = lift speed normalised to
+                                                                      [-1, 1] (like the real robot)
     rt/slamware_ros_sdk_server_node/odom      nav_msgs/Odometry       base pose (odom frame) and twist
 
 Commands are passed to the simulation through shared memory ("isaac_g1d_mobile_cmd"), the state
@@ -112,7 +113,9 @@ class G1DMobileDDS(DDSObject):
             if not data:
                 return
             self.height_state_msg.y = float(data["height"])
-            self.height_state_msg.z = float(data["height_speed"])
+            from robots.sysid.g1d import G1D_SYSID
+
+            self.height_state_msg.z = max(-1.0, min(1.0, float(data["height_speed"]) / G1D_SYSID.lift_max_speed))
             if self.height_state_publisher:
                 self.height_state_publisher.Write(self.height_state_msg)
 

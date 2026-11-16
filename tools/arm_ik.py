@@ -1,7 +1,7 @@
 # Copyright (c) 2025, Unitree Robotics Co., Ltd. All Rights Reserved.
 # License: Apache License, Version 2.0
 """
-Cartesian end-effector control for the G1 / G1-D arms (numpy only), used by the keyboard teleop scripts.
+Cartesian end-effector control for the G1 / G1-D / R1 arms (numpy only), used by the keyboard teleop scripts.
 
 The arm kinematics (torso_link -> <side>_wrist_yaw_link, 7 revolute joints) are read from a URDF.
 G1 29dof and G1-D have identical arms, so the G1-D URDF of this repository is used by default.
@@ -51,10 +51,12 @@ def _rot_error(R_target, R):
 class ArmKinematics:
     """FK / Jacobian / damped-least-squares IK of one arm."""
 
-    def __init__(self, side: str, tcp_offset=(0.15, 0.0, 0.0), urdf: str = DEFAULT_ARM_URDF, base_link: str = "torso_link"):
+    def __init__(self, side: str, tcp_offset=(0.15, 0.0, 0.0), urdf: str = DEFAULT_ARM_URDF, base_link: str = "torso_link",
+                 tip_link: str | None = None):
+        """``tip_link``: link the TCP offset is given in (default ``<side>_wrist_yaw_link``)."""
         root = ET.parse(urdf).getroot()
         by_child = {j.find("child").get("link"): j for j in root.findall("joint")}
-        chain, link = [], f"{side}_wrist_yaw_link"
+        chain, link = [], tip_link or f"{side}_wrist_yaw_link"
         while link != base_link:
             j = by_child[link]
             chain.append(j)
@@ -64,7 +66,7 @@ class ArmKinematics:
             o = j.find("origin")
             T = np.eye(4)
             T[:3, :3] = _rpy(*[float(v) for v in (o.get("rpy") or "0 0 0").split()])
-            T[:3, 3] = [float(v) for v in o.get("xyz").split()]
+            T[:3, 3] = [float(v) for v in (o.get("xyz") or "0 0 0").split()]
             axis = np.array([float(v) for v in j.find("axis").get("xyz").split()]) if j.get("type") != "fixed" else None
             lim = j.find("limit")
             limits = (float(lim.get("lower")), float(lim.get("upper"))) if axis is not None else None
@@ -126,26 +128,32 @@ class CartesianArms:
     """Keyboard-friendly Cartesian control of both arms (targets in the torso frame).
 
     ``q`` is the 14-vector of arm joint targets (left 7, right 7; lowcmd motors 15..28).
+    ``sides``: the arms (default both; a one-arm robot passes e.g. ``("left",)``, ``q_arms`` then has 7 values);
+    ``tip_links``: per side the link the TCP offset is given in (default ``<side>_wrist_yaw_link``).
     """
 
     POS_RATE = 0.15  # m/s
     ROT_RATE = 0.8  # rad/s
 
-    def __init__(self, q_arms, tcp_offset=(0.15, 0.0, 0.0), urdf: str = DEFAULT_ARM_URDF, base_link: str = "torso_link"):
-        self.arm = {s: ArmKinematics(s, tcp_offset, urdf, base_link) for s in ("left", "right")}
-        self.q = {"left": np.array(q_arms[:7], dtype=float), "right": np.array(q_arms[7:14], dtype=float)}
+    def __init__(self, q_arms, tcp_offset=(0.15, 0.0, 0.0), urdf: str = DEFAULT_ARM_URDF, base_link: str = "torso_link",
+                 sides=("left", "right"), tip_links: dict | None = None):
+        self.sides = tuple(sides)
+        self.arm = {s: ArmKinematics(s, tcp_offset, urdf, base_link, (tip_links or {}).get(s)) for s in self.sides}
+        self.q = {s: np.array(q_arms[7 * i:7 * i + 7], dtype=float) for i, s in enumerate(self.sides)}
         self.q_start = {s: v.copy() for s, v in self.q.items()}
-        self.side = "left"
+        self.side = self.sides[0]
         self._sync_targets()
 
     def _sync_targets(self):
-        self.target = {s: self.arm[s].fk(self.q[s]) for s in ("left", "right")}
+        self.target = {s: self.arm[s].fk(self.q[s]) for s in self.sides}
 
     def reset(self):
         self.q = {s: v.copy() for s, v in self.q_start.items()}
         self._sync_targets()
 
     def cycle_side(self):
+        if len(self.sides) < 2:
+            return
         self.side = {"left": "right", "right": "both", "both": "left"}[self.side]
         self._sync_targets()
 
@@ -168,7 +176,7 @@ class CartesianArms:
             self.target[s] = (p_new, R_new) if (ep < 0.01 and er < 0.1) else self.arm[s].fk(q)
 
     def q_arms(self):
-        return list(self.q["left"]) + list(self.q["right"])
+        return [v for s in self.sides for v in self.q[s]]
 
     def tcp_position(self, side):
         return self.target[side][0]
